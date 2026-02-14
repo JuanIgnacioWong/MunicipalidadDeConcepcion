@@ -1,0 +1,83 @@
+.sitio-cero-icon-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin: 0 0 10px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 2px 4px 2px 2px;
+    border: 1px solid #e2e4e7;
+    border-radius: 8px;
+    background: #f6f7f7;
+    align-content: start;
+}
+
+.sitio-cero-icon-picker__title {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.sitio-cero-icon-picker__item {
+    display: block;
+    margin: 0;
+    position: relative;
+}
+
+.sitio-cero-icon-picker__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sitio-cero-icon-picker__content {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.sitio-cero-icon-picker__item:hover .sitio-cero-icon-picker__content {
+    border-color: #8c8f94;
+}
+
+.sitio-cero-icon-picker__input:focus + .sitio-cero-icon-picker__content {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.sitio-cero-icon-picker__input:checked + .sitio-cero-icon-picker__content {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    background: #f0f6fc;
+}
+
+.sitio-cero-icon-picker__preview {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #1d2327;
+    line-height: 1;
+    font-size: 20px;
+    flex: 0 0 24px;
+}
+
+.sitio-cero-icon-picker__preview--none {
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sitio-cero-icon-picker__label {
+    color: #1d2327;
+    font-size: 12px;
+    line-height: 1.3;
+}
