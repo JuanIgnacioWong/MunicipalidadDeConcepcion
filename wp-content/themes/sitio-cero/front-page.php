@@ -66,6 +66,9 @@ get_header();
                                     if ('' === $hero_cta_url) {
                                         $hero_cta_url = trim((string) get_post_meta(get_the_ID(), 'hero_cta_url', true));
                                     }
+                                    if ('#tramites' === $hero_cta_url) {
+                                        $hero_cta_url = '#avisos';
+                                    }
                                     if ('' === $hero_cta_url) {
                                         $hero_cta_url = '#';
                                     }
@@ -151,7 +154,6 @@ get_header();
         <div class="container">
             <div class="section__header section__header--split">
                 <div>
-                    <p class="eyebrow">Actualidad</p>
                     <h2>Noticias municipales</h2>
                 </div>
                 <a class="section-link" href="<?php echo esc_url($news_archive_url); ?>">Ver todas</a>
@@ -190,7 +192,9 @@ get_header();
                             </a>
 
                             <div class="news-card__body">
-                                <p class="news-card__meta"><?php echo esc_html(get_the_date('d M Y')); ?></p>
+                                <?php if ('noticia' === get_post_type()) : ?>
+                                    <p class="news-card__meta"><?php echo esc_html(get_the_date('d M Y')); ?></p>
+                                <?php endif; ?>
                                 <h3 class="news-card__title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
                                 <p><?php echo esc_html(wp_trim_words(get_the_excerpt(), 20)); ?></p>
                                 <a class="news-card__link" href="<?php the_permalink(); ?>">Leer noticia</a>
@@ -208,12 +212,12 @@ get_header();
         </div>
     </section>
 
-    <section id="tramites" class="section section--paper">
+    <section id="avisos" class="section section--paper">
         <div class="container">
             <?php
-            $tramites_query = new WP_Query(
+            $avisos_query = new WP_Query(
                 array(
-                    'post_type'      => 'tramite_servicio',
+                    'post_type'      => 'aviso',
                     'post_status'    => 'publish',
                     'posts_per_page' => -1,
                     'orderby'        => array(
@@ -222,64 +226,58 @@ get_header();
                     ),
                 )
             );
-            $tramites_inline_css = '';
+            $avisos_total = (int) $avisos_query->post_count;
             ?>
 
-            <?php if ($tramites_query->have_posts()) : ?>
-                <div class="service-grid">
-                    <?php while ($tramites_query->have_posts()) : $tramites_query->the_post(); ?>
-                        <?php
-                        $tramite_id = get_the_ID();
-                        $tramite_url = trim((string) get_post_meta($tramite_id, 'sitio_cero_tramite_url', true));
-                        if ('' === $tramite_url) {
-                            $tramite_url = '#';
-                        }
-
-                        $tramite_custom_html = get_post_meta($tramite_id, 'sitio_cero_tramite_custom_html', true);
-                        if (!is_string($tramite_custom_html)) {
-                            $tramite_custom_html = '';
-                        }
-
-                        $tramite_bg_color = get_post_meta($tramite_id, 'sitio_cero_tramite_bg_color', true);
-                        if (!is_string($tramite_bg_color)) {
-                            $tramite_bg_color = '';
-                        }
-                        $tramite_bg_color = sanitize_hex_color($tramite_bg_color);
-
-                        $tramite_style = '';
-                        if (is_string($tramite_bg_color) && '' !== $tramite_bg_color) {
-                            $tramite_style = '--service-pastel-bg:' . $tramite_bg_color . ';';
-                        }
-
-                        $tramite_custom_css = trim((string) get_post_meta($tramite_id, 'sitio_cero_tramite_custom_css', true));
-                        if ('' !== $tramite_custom_css) {
-                            $card_selector = '.tramite-custom-' . $tramite_id;
-                            if (false !== strpos($tramite_custom_css, '{')) {
-                                $css_rule = str_replace('{{selector}}', $card_selector, $tramite_custom_css);
-                            } else {
-                                $css_rule = $card_selector . '{' . $tramite_custom_css . '}';
-                            }
-                            $tramites_inline_css .= $css_rule . "\n";
-                        }
-                        ?>
-                        <article class="service-card tramite-custom-<?php echo esc_attr((string) $tramite_id); ?>"<?php echo '' !== $tramite_style ? ' style="' . esc_attr($tramite_style) . '"' : ''; ?>>
-                            <a class="service-card__link" href="<?php echo esc_url($tramite_url); ?>">
-                                <div class="service-card__body">
-                                    <?php
-                                    if ('' !== trim($tramite_custom_html)) {
-                                        echo do_shortcode(wp_kses_post($tramite_custom_html));
-                                    } else {
-                                        echo wp_kses_post(apply_filters('the_content', get_the_content()));
-                                    }
-                                    ?>
-                                </div>
-                            </a>
-                        </article>
-                    <?php endwhile; ?>
+            <div class="section__header section__header--split">
+                <div>
+                    <h2><?php esc_html_e('Avisos municipales', 'sitio-cero'); ?></h2>
                 </div>
-                <?php if ('' !== trim($tramites_inline_css)) : ?>
-                    <style><?php echo wp_strip_all_tags($tramites_inline_css); ?></style>
-                <?php endif; ?>
+            </div>
+
+            <?php if ($avisos_query->have_posts()) : ?>
+                <div class="avisos-carousel" data-avisos-carousel>
+                    <div class="avisos-carousel__viewport" data-avisos-viewport>
+                        <div class="avisos-carousel__track" data-avisos-track>
+                            <?php
+                            while ($avisos_query->have_posts()) :
+                                $avisos_query->the_post();
+                                $aviso_image_url = function_exists('sitio_cero_get_aviso_image_url')
+                                    ? sitio_cero_get_aviso_image_url(get_the_ID(), 'large')
+                                    : '';
+                                ?>
+                                <article class="aviso-card" data-aviso-card>
+                                    <a class="aviso-card__link" href="<?php the_permalink(); ?>" aria-label="<?php the_title_attribute(); ?>">
+                                        <div class="aviso-card__media">
+                                            <?php if ('' !== $aviso_image_url) : ?>
+                                                <img class="aviso-card__image" src="<?php echo esc_url($aviso_image_url); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy">
+                                            <?php else : ?>
+                                                <span class="aviso-card__image aviso-card__image--placeholder">
+                                                    <?php esc_html_e('Sin imagen', 'sitio-cero'); ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </a>
+                                </article>
+                            <?php endwhile; ?>
+                        </div>
+                    </div>
+
+                    <?php if ($avisos_total > 5) : ?>
+                        <div class="avisos-carousel__controls">
+                            <button class="avisos-carousel__arrow avisos-carousel__arrow--prev" type="button" data-avisos-prev aria-label="<?php esc_attr_e('Avisos anteriores', 'sitio-cero'); ?>">
+                                <span aria-hidden="true">&#x276E;</span>
+                            </button>
+                            <button class="avisos-carousel__arrow avisos-carousel__arrow--next" type="button" data-avisos-next aria-label="<?php esc_attr_e('Siguientes avisos', 'sitio-cero'); ?>">
+                                <span aria-hidden="true">&#x276F;</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php else : ?>
+                <div class="empty-state">
+                    <p><?php esc_html_e('Aun no hay avisos publicados. Crea avisos desde el menu Avisos del administrador.', 'sitio-cero'); ?></p>
+                </div>
             <?php endif; ?>
             <?php wp_reset_postdata(); ?>
         </div>
@@ -288,7 +286,6 @@ get_header();
     <section class="section section--light">
         <div class="container info-grid">
             <article class="info-panel">
-                <p class="eyebrow">Quiero informacion de...</p>
                 <h2>Temas ciudadanos</h2>
                 <div class="topic-grid">
                     <a class="topic-pill" href="#">Aseo y ornato</a>
@@ -301,7 +298,6 @@ get_header();
             </article>
 
             <article class="info-panel info-panel--notice">
-                <p class="eyebrow">Aviso ciudadano</p>
                 <h2>Canal de reportes y emergencias urbanas</h2>
                 <p>
                     Si detectas luminarias apagadas, semaforos con falla o situacion de riesgo vial, ingresa tu reporte en linea y recibe seguimiento.
@@ -314,7 +310,6 @@ get_header();
     <section id="agenda" class="section section--accent">
         <div class="container agenda-grid">
             <article class="agenda-card">
-                <p class="eyebrow">Agenda comunal</p>
                 <h2>Proximas actividades</h2>
                 <ul class="agenda-list">
                     <li>
@@ -342,7 +337,6 @@ get_header();
             </article>
 
             <article class="agenda-card agenda-card--channels" id="canales">
-                <p class="eyebrow">Atencion ciudadana</p>
                 <h2>Canales para resolver tus consultas</h2>
                 <ul class="channel-list">
                     <li><strong>Presencial:</strong> Lunes a viernes, 08:30 a 14:00 hrs.</li>

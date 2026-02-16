@@ -15,7 +15,6 @@ get_header();
         $archive_description = get_the_archive_description();
         ?>
         <header class="section__header">
-            <p class="eyebrow"><?php esc_html_e('Actualidad', 'sitio-cero'); ?></p>
             <h1><?php echo esc_html(wp_strip_all_tags($archive_title)); ?></h1>
             <?php if (is_string($archive_description) && '' !== trim($archive_description)) : ?>
                 <div class="archive-description"><?php echo wp_kses_post($archive_description); ?></div>
@@ -33,7 +32,9 @@ get_header();
                         <?php endif; ?>
                     </a>
                     <div class="news-card__body">
-                        <p class="news-card__meta"><?php echo esc_html(get_the_date('d M Y')); ?></p>
+                        <?php if ('noticia' === get_post_type()) : ?>
+                            <p class="news-card__meta"><?php echo esc_html(get_the_date('d M Y')); ?></p>
+                        <?php endif; ?>
                         <h2 class="news-card__title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
                         <p><?php echo esc_html(wp_trim_words(get_the_excerpt(), 20)); ?></p>
                         <a class="news-card__link post-card__link" href="<?php the_permalink(); ?>"><?php esc_html_e('Leer mas', 'sitio-cero'); ?></a>

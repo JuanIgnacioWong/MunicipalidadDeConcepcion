@@ -91,6 +91,49 @@ function sitio_cero_admin_assets($hook_suffix)
 }
 add_action('admin_enqueue_scripts', 'sitio_cero_admin_assets');
 
+function sitio_cero_enqueue_aviso_admin_assets($hook_suffix)
+{
+    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || 'aviso' !== $screen->post_type) {
+        return;
+    }
+
+    $version = wp_get_theme()->get('Version');
+
+    wp_enqueue_media();
+
+    wp_enqueue_style(
+        'sitio-cero-admin-aviso-files',
+        get_template_directory_uri() . '/assets/css/admin-aviso-files.css',
+        array(),
+        $version
+    );
+
+    wp_enqueue_script(
+        'sitio-cero-admin-aviso-files',
+        get_template_directory_uri() . '/assets/js/admin-aviso-files.js',
+        array('jquery'),
+        $version,
+        true
+    );
+
+    wp_localize_script(
+        'sitio-cero-admin-aviso-files',
+        'sitioCeroAvisoFiles',
+        array(
+            'frameTitle'  => __('Selecciona archivos', 'sitio-cero'),
+            'frameButton' => __('Agregar archivos', 'sitio-cero'),
+            'addItemText' => __('Agregar item manual', 'sitio-cero'),
+            'removeText'  => __('Quitar', 'sitio-cero'),
+        )
+    );
+}
+add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_aviso_admin_assets');
+
 function sitio_cero_enqueue_noticia_admin_assets($hook_suffix)
 {
     if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
@@ -275,7 +318,7 @@ function sitio_cero_menu_fallback()
 
     echo '<ul class="site-nav__list">';
     echo '<li><a href="' . $home . '">' . esc_html__('Inicio', 'sitio-cero') . '</a></li>';
-    echo '<li><a href="' . $home . '#tramites">' . esc_html__('Tramites', 'sitio-cero') . '</a></li>';
+    echo '<li><a href="' . $home . '#avisos">' . esc_html__('Avisos', 'sitio-cero') . '</a></li>';
     echo '<li><a href="' . $home . '#noticias">' . esc_html__('Noticias', 'sitio-cero') . '</a></li>';
     echo '<li><a href="' . $home . '#agenda">' . esc_html__('Agenda', 'sitio-cero') . '</a></li>';
     echo '</ul>';
@@ -793,6 +836,669 @@ function sitio_cero_normalize_demo_noticias()
 }
 add_action('init', 'sitio_cero_normalize_demo_noticias', 41);
 
+function sitio_cero_register_aviso_post_type()
+{
+    $labels = array(
+        'name'               => __('Avisos', 'sitio-cero'),
+        'singular_name'      => __('Aviso', 'sitio-cero'),
+        'menu_name'          => __('Avisos', 'sitio-cero'),
+        'name_admin_bar'     => __('Aviso', 'sitio-cero'),
+        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
+        'add_new_item'       => __('Agregar aviso', 'sitio-cero'),
+        'new_item'           => __('Nuevo aviso', 'sitio-cero'),
+        'edit_item'          => __('Editar aviso', 'sitio-cero'),
+        'view_item'          => __('Ver aviso', 'sitio-cero'),
+        'all_items'          => __('Todos los avisos', 'sitio-cero'),
+        'search_items'       => __('Buscar avisos', 'sitio-cero'),
+        'not_found'          => __('No se encontraron avisos.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay avisos en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'aviso',
+        array(
+            'labels'             => $labels,
+            'public'             => true,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'show_in_nav_menus'  => true,
+            'show_in_admin_bar'  => true,
+            'show_in_rest'       => true,
+            'publicly_queryable' => true,
+            'exclude_from_search'=> false,
+            'has_archive'        => true,
+            'rewrite'            => array('slug' => 'avisos'),
+            'menu_position'      => 22,
+            'menu_icon'          => 'dashicons-format-gallery',
+            'supports'           => array('title', 'editor', 'excerpt', 'thumbnail', 'page-attributes'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_aviso_post_type');
+
+function sitio_cero_add_aviso_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_aviso_options',
+        __('Opciones del aviso', 'sitio-cero'),
+        'sitio_cero_render_aviso_metabox',
+        'aviso',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_aviso_metaboxes');
+
+function sitio_cero_render_aviso_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_aviso_meta', 'sitio_cero_aviso_meta_nonce');
+
+    $image_url = get_post_meta($post->ID, 'sitio_cero_aviso_image_url', true);
+    if (!is_string($image_url)) {
+        $image_url = '';
+    }
+
+    $parrafos = get_post_meta($post->ID, 'sitio_cero_aviso_parrafos', true);
+    if (!is_string($parrafos)) {
+        $parrafos = '';
+    }
+
+    $documentos = get_post_meta($post->ID, 'sitio_cero_aviso_documentos', true);
+    if (!is_string($documentos)) {
+        $documentos = '';
+    }
+
+    $archivos = get_post_meta($post->ID, 'sitio_cero_aviso_archivos', true);
+    if (!is_string($archivos)) {
+        $archivos = '';
+    }
+
+    $documentos_items = sitio_cero_parse_aviso_links_textarea($documentos);
+    $archivos_items = sitio_cero_parse_aviso_links_textarea($archivos);
+    $icon_options = sitio_cero_get_aviso_file_icon_options();
+    ?>
+    <p>
+        <label for="sitio_cero_aviso_image_url"><strong><?php esc_html_e('URL de imagen externa (opcional)', 'sitio-cero'); ?></strong></label><br>
+        <input
+            id="sitio_cero_aviso_image_url"
+            name="sitio_cero_aviso_image_url"
+            type="url"
+            class="widefat"
+            value="<?php echo esc_attr($image_url); ?>"
+            placeholder="https://..."
+        >
+    </p>
+    <p class="description">
+        <?php esc_html_e('Si no hay imagen destacada, se usara esta URL para mostrar el aviso en la portada.', 'sitio-cero'); ?>
+    </p>
+
+    <hr>
+
+    <p>
+        <label for="sitio_cero_aviso_parrafos"><strong><?php esc_html_e('Parrafos de texto (opcional)', 'sitio-cero'); ?></strong></label><br>
+        <textarea
+            id="sitio_cero_aviso_parrafos"
+            name="sitio_cero_aviso_parrafos"
+            class="widefat"
+            rows="6"
+            placeholder="<?php esc_attr_e('Escribe texto libre para la columna izquierda.', 'sitio-cero'); ?>"
+        ><?php echo esc_textarea($parrafos); ?></textarea>
+    </p>
+
+    <p>
+        <label><strong><?php esc_html_e('Documentos (opcional)', 'sitio-cero'); ?></strong></label>
+        <div class="sitio-cero-aviso-files" data-target="#sitio_cero_aviso_documentos">
+            <div class="sitio-cero-aviso-files__actions">
+                <button type="button" class="button button-secondary sitio-cero-aviso-files__library">
+                    <?php esc_html_e('Seleccionar desde biblioteca', 'sitio-cero'); ?>
+                </button>
+                <button type="button" class="button button-secondary sitio-cero-aviso-files__add">
+                    <?php esc_html_e('Agregar item manual', 'sitio-cero'); ?>
+                </button>
+            </div>
+            <div class="sitio-cero-aviso-files__list" data-file-list>
+                <?php foreach ($documentos_items as $item) : ?>
+                    <?php
+                    $item_label = isset($item['label']) ? (string) $item['label'] : '';
+                    $item_url = isset($item['url']) ? (string) $item['url'] : '';
+                    $item_icon = isset($item['icon']) ? (string) $item['icon'] : '';
+                    ?>
+                    <div class="sitio-cero-aviso-files__row" data-file-row>
+                        <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="<?php echo esc_attr($item_label); ?>">
+                        <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="<?php echo esc_attr($item_url); ?>">
+                        <select class="sitio-cero-aviso-files__select" data-key="icon">
+                            <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                                <option value="<?php echo esc_attr($icon_key); ?>"<?php selected($item_icon, $icon_key); ?>><?php echo esc_html($icon_label); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <template class="sitio-cero-aviso-files__template">
+                <div class="sitio-cero-aviso-files__row" data-file-row>
+                    <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="">
+                    <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="">
+                    <select class="sitio-cero-aviso-files__select" data-key="icon">
+                        <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                            <option value="<?php echo esc_attr($icon_key); ?>"><?php echo esc_html($icon_label); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+        <textarea id="sitio_cero_aviso_documentos" name="sitio_cero_aviso_documentos" class="widefat" rows="4" hidden><?php echo esc_textarea($documentos); ?></textarea>
+    </p>
+
+    <p>
+        <label><strong><?php esc_html_e('Archivos (opcional)', 'sitio-cero'); ?></strong></label>
+        <div class="sitio-cero-aviso-files" data-target="#sitio_cero_aviso_archivos">
+            <div class="sitio-cero-aviso-files__actions">
+                <button type="button" class="button button-secondary sitio-cero-aviso-files__library">
+                    <?php esc_html_e('Seleccionar desde biblioteca', 'sitio-cero'); ?>
+                </button>
+                <button type="button" class="button button-secondary sitio-cero-aviso-files__add">
+                    <?php esc_html_e('Agregar item manual', 'sitio-cero'); ?>
+                </button>
+            </div>
+            <div class="sitio-cero-aviso-files__list" data-file-list>
+                <?php foreach ($archivos_items as $item) : ?>
+                    <?php
+                    $item_label = isset($item['label']) ? (string) $item['label'] : '';
+                    $item_url = isset($item['url']) ? (string) $item['url'] : '';
+                    $item_icon = isset($item['icon']) ? (string) $item['icon'] : '';
+                    ?>
+                    <div class="sitio-cero-aviso-files__row" data-file-row>
+                        <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="<?php echo esc_attr($item_label); ?>">
+                        <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="<?php echo esc_attr($item_url); ?>">
+                        <select class="sitio-cero-aviso-files__select" data-key="icon">
+                            <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                                <option value="<?php echo esc_attr($icon_key); ?>"<?php selected($item_icon, $icon_key); ?>><?php echo esc_html($icon_label); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <template class="sitio-cero-aviso-files__template">
+                <div class="sitio-cero-aviso-files__row" data-file-row>
+                    <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="">
+                    <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="">
+                    <select class="sitio-cero-aviso-files__select" data-key="icon">
+                        <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                            <option value="<?php echo esc_attr($icon_key); ?>"><?php echo esc_html($icon_label); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+        <textarea id="sitio_cero_aviso_archivos" name="sitio_cero_aviso_archivos" class="widefat" rows="4" hidden><?php echo esc_textarea($archivos); ?></textarea>
+    </p>
+    <?php
+}
+
+function sitio_cero_get_aviso_file_icon_options()
+{
+    return array(
+        ''     => __('Icono automatico', 'sitio-cero'),
+        'doc'  => __('DOC', 'sitio-cero'),
+        'pdf'  => __('PDF', 'sitio-cero'),
+        'img'  => __('IMG', 'sitio-cero'),
+        'xls'  => __('XLS', 'sitio-cero'),
+        'file' => __('Archivo', 'sitio-cero'),
+    );
+}
+
+function sitio_cero_sanitize_aviso_file_icon($value)
+{
+    $value = strtolower(trim((string) $value));
+    $options = sitio_cero_get_aviso_file_icon_options();
+    return isset($options[$value]) ? $value : '';
+}
+
+function sitio_cero_detect_aviso_file_icon_by_url($url)
+{
+    $url = is_string($url) ? trim($url) : '';
+    if ('' === $url) {
+        return 'file';
+    }
+
+    $path = wp_parse_url($url, PHP_URL_PATH);
+    $extension = is_string($path) ? strtolower((string) pathinfo($path, PATHINFO_EXTENSION)) : '';
+
+    if (in_array($extension, array('pdf'), true)) {
+        return 'pdf';
+    }
+
+    if (in_array($extension, array('doc', 'docx', 'odt', 'rtf', 'txt'), true)) {
+        return 'doc';
+    }
+
+    if (in_array($extension, array('xls', 'xlsx', 'csv', 'ods'), true)) {
+        return 'xls';
+    }
+
+    if (in_array($extension, array('jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'heic', 'bmp', 'tif', 'tiff'), true)) {
+        return 'img';
+    }
+
+    return 'file';
+}
+
+function sitio_cero_get_aviso_file_icon_symbol($icon_key)
+{
+    $icon_key = sitio_cero_sanitize_aviso_file_icon($icon_key);
+    if ('' === $icon_key) {
+        $icon_key = 'file';
+    }
+
+    $map = array(
+        'doc'  => 'description',
+        'pdf'  => 'picture_as_pdf',
+        'img'  => 'image',
+        'xls'  => 'table_view',
+        'file' => 'attach_file',
+    );
+
+    return isset($map[$icon_key]) ? $map[$icon_key] : 'attach_file';
+}
+
+function sitio_cero_sanitize_aviso_links_textarea($value)
+{
+    $value = is_string($value) ? $value : '';
+    if ('' === trim($value)) {
+        return '';
+    }
+
+    $lines = preg_split('/\r\n|\r|\n/', $value);
+    if (!is_array($lines)) {
+        return '';
+    }
+
+    $normalized = array();
+    foreach ($lines as $line) {
+        $line = trim((string) $line);
+        if ('' === $line) {
+            continue;
+        }
+
+        $parts = explode('|', $line, 3);
+        $label = '';
+        $url = $line;
+        $icon = '';
+
+        if (2 === count($parts)) {
+            $first = trim((string) $parts[0]);
+            $second = trim((string) $parts[1]);
+            $second_icon = sitio_cero_sanitize_aviso_file_icon($second);
+
+            if ('' !== esc_url_raw($first) && '' !== $second_icon && '' === esc_url_raw($second)) {
+                // Legacy shorthand when label is empty: url|icon
+                $url = $first;
+                $icon = $second_icon;
+            } else {
+                $label = sanitize_text_field($first);
+                $url = $second;
+            }
+        } elseif (3 <= count($parts)) {
+            $label = sanitize_text_field(trim((string) $parts[0]));
+            $url = trim((string) $parts[1]);
+            $icon = sitio_cero_sanitize_aviso_file_icon((string) $parts[2]);
+        }
+
+        $url = esc_url_raw($url);
+        if ('' === $url) {
+            continue;
+        }
+
+        if ('' === $label) {
+            $normalized_line = $url;
+        } else {
+            $normalized_line = $label . '|' . $url;
+        }
+
+        if ('' !== $icon) {
+            $normalized_line .= '|' . $icon;
+        }
+
+        $normalized[] = $normalized_line;
+    }
+
+    return implode("\n", $normalized);
+}
+
+function sitio_cero_parse_aviso_links_textarea($value)
+{
+    $value = is_string($value) ? $value : '';
+    if ('' === trim($value)) {
+        return array();
+    }
+
+    $lines = preg_split('/\r\n|\r|\n/', $value);
+    if (!is_array($lines)) {
+        return array();
+    }
+
+    $items = array();
+    foreach ($lines as $line) {
+        $line = trim((string) $line);
+        if ('' === $line) {
+            continue;
+        }
+
+        $parts = explode('|', $line, 3);
+        $label = '';
+        $url = $line;
+        $icon = '';
+
+        if (2 === count($parts)) {
+            $first = trim((string) $parts[0]);
+            $second = trim((string) $parts[1]);
+            $second_icon = sitio_cero_sanitize_aviso_file_icon($second);
+
+            if ('' !== esc_url_raw($first) && '' !== $second_icon && '' === esc_url_raw($second)) {
+                // Legacy shorthand when label is empty: url|icon
+                $url = $first;
+                $icon = $second_icon;
+            } else {
+                $label = sanitize_text_field($first);
+                $url = $second;
+            }
+        } elseif (3 <= count($parts)) {
+            $label = sanitize_text_field(trim((string) $parts[0]));
+            $url = trim((string) $parts[1]);
+            $icon = sitio_cero_sanitize_aviso_file_icon((string) $parts[2]);
+        }
+
+        $url = esc_url_raw($url);
+        if ('' === $url) {
+            continue;
+        }
+
+        if ('' === $label) {
+            $path = wp_parse_url($url, PHP_URL_PATH);
+            if (is_string($path) && '' !== trim($path)) {
+                $basename = basename($path);
+                if (is_string($basename) && '' !== trim($basename)) {
+                    $label = sanitize_text_field(urldecode($basename));
+                }
+            }
+        }
+
+        if ('' === $label) {
+            $label = __('Descargar archivo', 'sitio-cero');
+        }
+
+        if ('' === $icon) {
+            $icon = sitio_cero_detect_aviso_file_icon_by_url($url);
+        }
+
+        $items[] = array(
+            'label' => $label,
+            'url'   => $url,
+            'icon'  => $icon,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_get_aviso_links($post_id, $meta_key)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return array();
+    }
+
+    $raw_value = get_post_meta($post_id, $meta_key, true);
+    return sitio_cero_parse_aviso_links_textarea(is_string($raw_value) ? $raw_value : '');
+}
+
+function sitio_cero_save_aviso_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_aviso_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_aviso_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_aviso_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $image_url = '';
+    if (isset($_POST['sitio_cero_aviso_image_url'])) {
+        $image_url = esc_url_raw(wp_unslash($_POST['sitio_cero_aviso_image_url']));
+    }
+
+    if ('' !== $image_url) {
+        update_post_meta($post_id, 'sitio_cero_aviso_image_url', $image_url);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_aviso_image_url');
+    }
+
+    $parrafos = '';
+    if (isset($_POST['sitio_cero_aviso_parrafos'])) {
+        $parrafos = wp_unslash($_POST['sitio_cero_aviso_parrafos']);
+        if (current_user_can('unfiltered_html')) {
+            $parrafos = preg_replace('/<\/?script[^>]*>/i', '', (string) $parrafos);
+            $parrafos = preg_replace('/\s+on[a-z]+\s*=\s*([\'"]).*?\1/i', '', (string) $parrafos);
+            $parrafos = trim((string) $parrafos);
+        } else {
+            $parrafos = sanitize_textarea_field((string) $parrafos);
+        }
+    }
+
+    if ('' !== $parrafos) {
+        update_post_meta($post_id, 'sitio_cero_aviso_parrafos', $parrafos);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_aviso_parrafos');
+    }
+
+    $documentos = '';
+    if (isset($_POST['sitio_cero_aviso_documentos'])) {
+        $documentos = sitio_cero_sanitize_aviso_links_textarea(wp_unslash($_POST['sitio_cero_aviso_documentos']));
+    }
+
+    if ('' !== $documentos) {
+        update_post_meta($post_id, 'sitio_cero_aviso_documentos', $documentos);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_aviso_documentos');
+    }
+
+    $archivos = '';
+    if (isset($_POST['sitio_cero_aviso_archivos'])) {
+        $archivos = sitio_cero_sanitize_aviso_links_textarea(wp_unslash($_POST['sitio_cero_aviso_archivos']));
+    }
+
+    if ('' !== $archivos) {
+        update_post_meta($post_id, 'sitio_cero_aviso_archivos', $archivos);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_aviso_archivos');
+    }
+}
+add_action('save_post_aviso', 'sitio_cero_save_aviso_meta');
+
+function sitio_cero_get_aviso_image_url($post_id, $size = 'large')
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return '';
+    }
+
+    if (has_post_thumbnail($post_id)) {
+        $image_src = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), $size);
+        if (is_array($image_src) && !empty($image_src[0])) {
+            return (string) $image_src[0];
+        }
+    }
+
+    $image_url = get_post_meta($post_id, 'sitio_cero_aviso_image_url', true);
+    if (!is_string($image_url)) {
+        return '';
+    }
+
+    return esc_url_raw($image_url);
+}
+
+function sitio_cero_get_default_aviso_examples()
+{
+    return array(
+        array(
+            'title'     => __('Aviso: mantenimiento nocturno en avenida principal', 'sitio-cero'),
+            'excerpt'   => __('Habra ajustes operativos entre las 22:00 y 05:00 hrs durante esta semana.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-01/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: operativo barrial de retiro de enseres', 'sitio-cero'),
+            'excerpt'   => __('Revisa puntos habilitados y horarios para retiro de residuos voluminosos.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-02/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: campaña comunal de reciclaje puerta a puerta', 'sitio-cero'),
+            'excerpt'   => __('Nueva ruta semanal para plastico, carton y vidrio en sectores priorizados.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-03/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: agenda de servicios municipales en terreno', 'sitio-cero'),
+            'excerpt'   => __('Atencion ciudadana y orientacion de tramites en distintos barrios.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-04/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: trabajos de conservacion en plazas y areas verdes', 'sitio-cero'),
+            'excerpt'   => __('Intervenciones programadas para mejorar espacios de recreacion comunitaria.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-05/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: jornada especial de salud preventiva comunal', 'sitio-cero'),
+            'excerpt'   => __('Controles y orientacion gratuita en puntos territoriales definidos.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-06/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: actualizacion de rutas de transporte local', 'sitio-cero'),
+            'excerpt'   => __('Cambios temporales por mejoras viales en tramos estrategicos.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-07/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: convocatoria cultural abierta para organizaciones', 'sitio-cero'),
+            'excerpt'   => __('Postula actividades para la cartelera comunal del proximo mes.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-08/1400/760',
+        ),
+        array(
+            'title'     => __('Aviso: plan de seguridad vial en entornos escolares', 'sitio-cero'),
+            'excerpt'   => __('Refuerzo de cruces, senaletica y apoyo preventivo en horarios punta.', 'sitio-cero'),
+            'image_url' => 'https://picsum.photos/seed/concepcion-aviso-09/1400/760',
+        ),
+    );
+}
+
+function sitio_cero_seed_default_avisos()
+{
+    if (!post_type_exists('aviso')) {
+        return;
+    }
+
+    $seed_version = '2';
+    $already_seeded_version = (string) get_option('sitio_cero_default_avisos_seeded_version', '');
+    if ($seed_version === $already_seeded_version) {
+        return;
+    }
+
+    $items = sitio_cero_get_default_aviso_examples();
+
+    $existing_demo_posts = get_posts(
+        array(
+            'post_type'      => 'aviso',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => -1,
+            'orderby'        => array(
+                'menu_order' => 'ASC',
+                'date'       => 'ASC',
+            ),
+            'meta_key'       => '_sitio_cero_demo_aviso',
+            'meta_value'     => '1',
+            'no_found_rows'  => true,
+        )
+    );
+
+    $keep_ids = array();
+
+    foreach ($items as $index => $item) {
+        $post_id = 0;
+
+        foreach ($existing_demo_posts as $candidate_post) {
+            if (in_array((int) $candidate_post->ID, $keep_ids, true)) {
+                continue;
+            }
+
+            if ((string) $candidate_post->post_title === (string) $item['title']) {
+                $post_id = (int) $candidate_post->ID;
+                break;
+            }
+        }
+
+        if ($post_id <= 0) {
+            $post_id = wp_insert_post(
+                array(
+                    'post_type'    => 'aviso',
+                    'post_status'  => 'publish',
+                    'post_title'   => $item['title'],
+                    'post_excerpt' => $item['excerpt'],
+                    'menu_order'   => $index + 1,
+                ),
+                true
+            );
+        } else {
+            wp_update_post(
+                array(
+                    'ID'           => $post_id,
+                    'post_status'  => 'publish',
+                    'post_excerpt' => $item['excerpt'],
+                    'menu_order'   => $index + 1,
+                )
+            );
+        }
+
+        if (is_wp_error($post_id) || !$post_id) {
+            continue;
+        }
+
+        $keep_ids[] = (int) $post_id;
+        update_post_meta($post_id, '_sitio_cero_demo_aviso', '1');
+
+        if (isset($item['image_url']) && is_string($item['image_url'])) {
+            $image_url = esc_url_raw($item['image_url']);
+            if ('' !== $image_url) {
+                update_post_meta($post_id, 'sitio_cero_aviso_image_url', $image_url);
+            }
+        }
+    }
+
+    foreach ($existing_demo_posts as $candidate_post) {
+        $candidate_id = (int) $candidate_post->ID;
+        if (!in_array($candidate_id, $keep_ids, true)) {
+            wp_trash_post($candidate_id);
+        }
+    }
+
+    update_option('sitio_cero_default_avisos_seeded_version', $seed_version);
+    update_option('sitio_cero_default_avisos_seeded', '1');
+}
+add_action('init', 'sitio_cero_seed_default_avisos', 34);
+
 function sitio_cero_register_tramite_post_type()
 {
     $labels = array(
@@ -825,7 +1531,7 @@ function sitio_cero_register_tramite_post_type()
             'exclude_from_search'=> true,
             'has_archive'        => false,
             'rewrite'            => false,
-            'menu_position'      => 22,
+            'menu_position'      => 23,
             'menu_icon'          => 'dashicons-welcome-write-blog',
             'supports'           => array('title', 'editor', 'thumbnail', 'page-attributes'),
         )
@@ -1862,7 +2568,7 @@ function sitio_cero_seed_default_lamina()
     }
 
     update_post_meta($post_id, 'sitio_cero_hero_cta_text', __('Conocer operativos', 'sitio-cero'));
-    update_post_meta($post_id, 'sitio_cero_hero_cta_url', '#tramites');
+    update_post_meta($post_id, 'sitio_cero_hero_cta_url', '#avisos');
 
     update_option('sitio_cero_default_lamina_seeded', '1');
 }

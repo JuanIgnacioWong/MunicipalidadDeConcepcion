@@ -1,0 +1,49 @@
+.sitio-cero-aviso-files {
+    border: 1px solid #dcdcde;
+    border-radius: 10px;
+    padding: 10px;
+    background: #fff;
+    margin-top: 8px;
+}
+
+.sitio-cero-aviso-files__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.sitio-cero-aviso-files__list {
+    display: grid;
+    gap: 10px;
+}
+
+.sitio-cero-aviso-files__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 132px auto;
+    gap: 8px;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #e0e3e8;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.sitio-cero-aviso-files__input {
+    margin: 0;
+}
+
+.sitio-cero-aviso-files__select {
+    width: 100%;
+    min-height: 32px;
+}
+
+.sitio-cero-aviso-files__remove {
+    color: #b42318;
+}
+
+@media (max-width: 1080px) {
+    .sitio-cero-aviso-files__row {
+        grid-template-columns: 1fr;
+    }
+}

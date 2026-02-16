@@ -128,6 +128,116 @@
         sliders.forEach((slider) => initHeroSlider(slider));
     };
 
+    const initAvisosCarousel = (carousel) => {
+        const viewport = carousel.querySelector('[data-avisos-viewport]');
+        const track = carousel.querySelector('[data-avisos-track]');
+        const cards = Array.from(carousel.querySelectorAll('[data-aviso-card]'));
+        const prevButton = carousel.querySelector('[data-avisos-prev]');
+        const nextButton = carousel.querySelector('[data-avisos-next]');
+
+        if (!viewport || !track || cards.length === 0) {
+            return;
+        }
+
+        let currentPage = 0;
+        let maxPage = 0;
+        let autoplayTimer = null;
+
+        const getPerView = () => {
+            const rawValue = window.getComputedStyle(carousel).getPropertyValue('--avisos-per-view');
+            const parsed = Number.parseInt(rawValue || '5', 10);
+            if (Number.isNaN(parsed) || parsed <= 0) {
+                return 5;
+            }
+            return parsed;
+        };
+
+        const updateControls = () => {
+            const isStatic = maxPage <= 0;
+            if (prevButton) {
+                prevButton.disabled = isStatic;
+            }
+            if (nextButton) {
+                nextButton.disabled = isStatic;
+            }
+        };
+
+        const applyTransform = () => {
+            const x = currentPage * viewport.clientWidth;
+            track.style.transform = `translateX(-${x}px)`;
+        };
+
+        const refresh = () => {
+            const perView = getPerView();
+            maxPage = Math.max(Math.ceil(cards.length / perView) - 1, 0);
+            if (currentPage > maxPage) {
+                currentPage = maxPage;
+            }
+            applyTransform();
+            updateControls();
+        };
+
+        const goToPage = (page) => {
+            if (maxPage <= 0) {
+                return;
+            }
+            const totalPages = maxPage + 1;
+            currentPage = (page + totalPages) % totalPages;
+            applyTransform();
+            updateControls();
+        };
+
+        if (prevButton) {
+            prevButton.addEventListener('click', () => {
+                goToPage(currentPage - 1);
+            });
+        }
+
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                goToPage(currentPage + 1);
+            });
+        }
+
+        const stopAutoplay = () => {
+            if (autoplayTimer) {
+                window.clearInterval(autoplayTimer);
+                autoplayTimer = null;
+            }
+        };
+
+        const startAutoplay = () => {
+            stopAutoplay();
+            if (maxPage <= 0) {
+                return;
+            }
+            autoplayTimer = window.setInterval(() => {
+                goToPage(currentPage + 1);
+            }, 5200);
+        };
+
+        carousel.addEventListener('mouseenter', stopAutoplay);
+        carousel.addEventListener('mouseleave', startAutoplay);
+        carousel.addEventListener('focusin', stopAutoplay);
+        carousel.addEventListener('focusout', (event) => {
+            if (!carousel.contains(event.relatedTarget)) {
+                startAutoplay();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            refresh();
+        });
+
+        refresh();
+        startAutoplay();
+    };
+
+    const initAvisosCarousels = () => {
+        const carousels = document.querySelectorAll('[data-avisos-carousel]');
+        carousels.forEach((carousel) => initAvisosCarousel(carousel));
+    };
+
     const initNewsGallery = (gallery) => {
         const slides = Array.from(gallery.querySelectorAll('[data-news-gallery-slide]'));
         if (slides.length === 0) {
@@ -265,5 +375,6 @@
 
     initNavigation();
     initHeroSliders();
+    initAvisosCarousels();
     initNewsGalleries();
 })();

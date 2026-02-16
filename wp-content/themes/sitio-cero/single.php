@@ -6,8 +6,13 @@ get_header();
     <?php if (have_posts()) : while (have_posts()) : the_post(); ?>
         <?php
         $is_noticia = 'noticia' === get_post_type();
+        $is_aviso = 'aviso' === get_post_type();
         $has_media = has_post_thumbnail();
         $gallery_items = array();
+        $aviso_image_url = '';
+        $aviso_parrafos = '';
+        $aviso_documentos = array();
+        $aviso_archivos = array();
 
         if ($is_noticia && function_exists('sitio_cero_get_noticia_gallery_ids')) {
             $gallery_ids = sitio_cero_get_noticia_gallery_ids(get_the_ID());
@@ -37,12 +42,38 @@ get_header();
                 );
             }
         }
+
+        if ($is_aviso) {
+            if (function_exists('sitio_cero_get_aviso_image_url')) {
+                $aviso_image_url = sitio_cero_get_aviso_image_url(get_the_ID(), 'large');
+            }
+
+            $aviso_parrafos = get_post_meta(get_the_ID(), 'sitio_cero_aviso_parrafos', true);
+            if (!is_string($aviso_parrafos)) {
+                $aviso_parrafos = '';
+            }
+
+            if ('' === trim($aviso_parrafos)) {
+                $raw_content = get_the_content(null, false, get_the_ID());
+                if (is_string($raw_content)) {
+                    $aviso_parrafos = trim((string) apply_filters('the_content', $raw_content));
+                }
+            } else {
+                $aviso_parrafos = wpautop(wp_kses_post($aviso_parrafos));
+            }
+
+            if (function_exists('sitio_cero_get_aviso_links')) {
+                $aviso_documentos = sitio_cero_get_aviso_links(get_the_ID(), 'sitio_cero_aviso_documentos');
+                $aviso_archivos = sitio_cero_get_aviso_links(get_the_ID(), 'sitio_cero_aviso_archivos');
+            }
+        }
         ?>
         <article <?php post_class(); ?>>
             <header class="section__header">
-                <p class="eyebrow"><?php echo $is_noticia ? esc_html__('Noticia', 'sitio-cero') : esc_html__('Articulo', 'sitio-cero'); ?></p>
                 <h1><?php the_title(); ?></h1>
-                <p class="meta"><?php echo esc_html(get_the_date()); ?></p>
+                <?php if ($is_noticia) : ?>
+                    <p class="meta"><?php echo esc_html(get_the_date()); ?></p>
+                <?php endif; ?>
             </header>
 
             <?php if ($is_noticia) : ?>
@@ -132,6 +163,88 @@ get_header();
                         </div>
                     </section>
                 <?php endif; ?>
+            <?php elseif ($is_aviso) : ?>
+                <div class="content-body aviso-single-layout">
+                    <div class="aviso-single-layout__left">
+                        <?php if ('' !== trim((string) $aviso_parrafos)) : ?>
+                            <section class="aviso-single-block aviso-single-block--text">
+                                <div class="aviso-single-block__content">
+                                    <?php echo wp_kses_post($aviso_parrafos); ?>
+                                </div>
+                            </section>
+                        <?php endif; ?>
+
+                        <?php if (!empty($aviso_documentos)) : ?>
+                            <section class="aviso-single-block">
+                                <h2><?php esc_html_e('Documentos', 'sitio-cero'); ?></h2>
+                                <ul class="aviso-single-list">
+                                    <?php foreach ($aviso_documentos as $item) : ?>
+                                        <?php if (!is_array($item) || empty($item['url'])) {
+                                            continue;
+                                        } ?>
+                                        <?php
+                                        $icon_key = isset($item['icon']) ? (string) $item['icon'] : '';
+                                        if ('' === $icon_key && function_exists('sitio_cero_detect_aviso_file_icon_by_url')) {
+                                            $icon_key = sitio_cero_detect_aviso_file_icon_by_url((string) $item['url']);
+                                        }
+                                        $icon_key = is_string($icon_key) ? $icon_key : 'file';
+                                        $icon_symbol = function_exists('sitio_cero_get_aviso_file_icon_symbol')
+                                            ? sitio_cero_get_aviso_file_icon_symbol($icon_key)
+                                            : 'attach_file';
+                                        ?>
+                                        <li>
+                                            <a class="aviso-single-file-btn aviso-single-file-btn--<?php echo esc_attr($icon_key); ?>" href="<?php echo esc_url($item['url']); ?>" target="_blank" rel="noopener noreferrer">
+                                                <span class="material-symbols-rounded aviso-single-file-btn__icon" aria-hidden="true"><?php echo esc_html($icon_symbol); ?></span>
+                                                <span class="aviso-single-file-btn__text"><?php echo esc_html(isset($item['label']) ? (string) $item['label'] : 'Documento'); ?></span>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </section>
+                        <?php endif; ?>
+
+                        <?php if (!empty($aviso_archivos)) : ?>
+                            <section class="aviso-single-block">
+                                <h2><?php esc_html_e('Archivos', 'sitio-cero'); ?></h2>
+                                <ul class="aviso-single-list">
+                                    <?php foreach ($aviso_archivos as $item) : ?>
+                                        <?php if (!is_array($item) || empty($item['url'])) {
+                                            continue;
+                                        } ?>
+                                        <?php
+                                        $icon_key = isset($item['icon']) ? (string) $item['icon'] : '';
+                                        if ('' === $icon_key && function_exists('sitio_cero_detect_aviso_file_icon_by_url')) {
+                                            $icon_key = sitio_cero_detect_aviso_file_icon_by_url((string) $item['url']);
+                                        }
+                                        $icon_key = is_string($icon_key) ? $icon_key : 'file';
+                                        $icon_symbol = function_exists('sitio_cero_get_aviso_file_icon_symbol')
+                                            ? sitio_cero_get_aviso_file_icon_symbol($icon_key)
+                                            : 'attach_file';
+                                        ?>
+                                        <li>
+                                            <a class="aviso-single-file-btn aviso-single-file-btn--<?php echo esc_attr($icon_key); ?>" href="<?php echo esc_url($item['url']); ?>" target="_blank" rel="noopener noreferrer">
+                                                <span class="material-symbols-rounded aviso-single-file-btn__icon" aria-hidden="true"><?php echo esc_html($icon_symbol); ?></span>
+                                                <span class="aviso-single-file-btn__text"><?php echo esc_html(isset($item['label']) ? (string) $item['label'] : 'Archivo'); ?></span>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </section>
+                        <?php endif; ?>
+                    </div>
+
+                    <aside class="aviso-single-layout__right">
+                        <?php if ('' !== trim($aviso_image_url)) : ?>
+                            <figure class="aviso-single-media">
+                                <img src="<?php echo esc_url($aviso_image_url); ?>" alt="<?php the_title_attribute(); ?>" class="aviso-single-media__image" loading="eager">
+                            </figure>
+                        <?php elseif ($has_media) : ?>
+                            <figure class="aviso-single-media">
+                                <?php the_post_thumbnail('large', array('class' => 'aviso-single-media__image', 'loading' => 'eager')); ?>
+                            </figure>
+                        <?php endif; ?>
+                    </aside>
+                </div>
             <?php else : ?>
                 <div class="content-body">
                     <?php the_content(); ?>
