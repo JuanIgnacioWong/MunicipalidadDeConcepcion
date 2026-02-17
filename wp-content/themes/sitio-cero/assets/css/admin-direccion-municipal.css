@@ -1,0 +1,108 @@
+.sitio-cero-dm-metabox {
+    display: grid;
+    gap: 14px;
+}
+
+.sitio-cero-dm-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.sitio-cero-dm-grid--styles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sitio-cero-dm-phones {
+    display: grid;
+    gap: 8px;
+}
+
+.sitio-cero-dm-phones__list {
+    display: grid;
+    gap: 8px;
+}
+
+.sitio-cero-dm-phones__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.sitio-cero-dm-accordion {
+    display: grid;
+    gap: 10px;
+}
+
+.sitio-cero-dm-accordion__list {
+    display: grid;
+    gap: 10px;
+}
+
+.sitio-cero-dm-accordion__row {
+    border: 1px solid #d7dde7;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.sitio-cero-dm-accordion__row-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.sitio-cero-dm-accordion__row-head strong {
+    flex: 1;
+}
+
+.sitio-cero-dm-accordion__drag {
+    cursor: move;
+}
+
+.sitio-cero-dm-accordion__row--placeholder {
+    border: 1px dashed #8ca4d2;
+    background: #eef3fb;
+    min-height: 42px;
+    border-radius: 8px;
+}
+
+.sitio-cero-dm-subtabs {
+    border-top: 1px solid #dce4f2;
+    margin-top: 10px;
+    padding-top: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.sitio-cero-dm-subtabs__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sitio-cero-dm-subtabs__list {
+    display: grid;
+    gap: 8px;
+}
+
+.sitio-cero-dm-subtabs__row {
+    background: #ffffff;
+    border: 1px solid #dce4f2;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.sitio-cero-dm-subtabs__row p {
+    margin: 0 0 8px;
+}
+
+@media (max-width: 980px) {
+    .sitio-cero-dm-grid,
+    .sitio-cero-dm-grid--styles {
+        grid-template-columns: 1fr;
+    }
+}

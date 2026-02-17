@@ -1089,6 +1089,433 @@ img {
     color: #ffffff;
 }
 
+.direccion-municipal-page .direccion-municipal-single {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.direccion-municipal-page .direccion-municipal-single::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 8px;
+    background: linear-gradient(90deg, #0f2343 0%, #17599e 56%, #3399ff 100%);
+}
+
+.direccion-municipal-single__header {
+    margin-bottom: 1rem;
+    padding: 0.3rem 0 0.95rem;
+    border-bottom: 1px solid rgba(15, 35, 67, 0.12);
+}
+
+.direccion-municipal-single__kicker {
+    margin: 0 0 0.32rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.22rem 0.66rem;
+    border-radius: 999px;
+    background: rgba(23, 89, 158, 0.1);
+    color: #17599e;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.direccion-municipal-single__kicker::before {
+    content: 'domain';
+    font-family: 'Material Symbols Rounded';
+    font-size: 1rem;
+    line-height: 1;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+.direccion-municipal-single__intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.92fr);
+    gap: clamp(1rem, 2.3vw, 1.45rem);
+    margin-bottom: clamp(1rem, 2.5vw, 1.45rem);
+}
+
+.direccion-municipal-org,
+.direccion-municipal-map,
+.direccion-municipal-accordion-wrap,
+.direccion-municipal-content,
+.direccion-municipal-custom {
+    border: 1px solid rgba(15, 35, 67, 0.11);
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 12px 26px rgba(16, 45, 83, 0.08);
+}
+
+.direccion-municipal-org,
+.direccion-municipal-map {
+    padding: clamp(0.95rem, 2vw, 1.2rem);
+}
+
+.direccion-municipal-content,
+.direccion-municipal-accordion-wrap,
+.direccion-municipal-custom {
+    padding: clamp(0.95rem, 2.2vw, 1.22rem);
+}
+
+.direccion-municipal-org h2,
+.direccion-municipal-map h2,
+.direccion-municipal-accordion-wrap h2 {
+    margin: 0 0 0.76rem;
+    color: var(--color-navy);
+    font-size: clamp(1.16rem, 1.85vw, 1.36rem);
+}
+
+.direccion-municipal-org__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.52rem;
+}
+
+.direccion-municipal-org__list li {
+    position: relative;
+    padding: 0.7rem 0.8rem 0.72rem 2.55rem;
+    border: 1px solid rgba(15, 35, 67, 0.11);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+    display: grid;
+    gap: 0.12rem;
+}
+
+.direccion-municipal-org__list li::before {
+    content: 'badge';
+    font-family: 'Material Symbols Rounded';
+    position: absolute;
+    left: 0.78rem;
+    top: 0.68rem;
+    width: 1.32rem;
+    height: 1.32rem;
+    border-radius: 999px;
+    background: rgba(23, 89, 158, 0.12);
+    color: #17599e;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+
+.direccion-municipal-org__list li[data-type='profesion']::before {
+    content: 'school';
+}
+
+.direccion-municipal-org__list li[data-type='telefonos']::before {
+    content: 'call';
+}
+
+.direccion-municipal-org__list li[data-type='email']::before {
+    content: 'mail';
+}
+
+.direccion-municipal-org__list li[data-type='direccion']::before {
+    content: 'location_on';
+}
+
+.direccion-municipal-org__label {
+    color: var(--color-navy);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.direccion-municipal-org__phones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.34rem;
+}
+
+.direccion-municipal-org__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0.15rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(15, 35, 67, 0.07);
+    color: #0f2343;
+    font-size: 0.93rem;
+    font-weight: 700;
+}
+
+.direccion-municipal-org__mail {
+    color: #17599e;
+    font-weight: 700;
+}
+
+.direccion-municipal-org__mail:hover,
+.direccion-municipal-org__mail:focus-visible {
+    text-decoration: underline;
+}
+
+.direccion-municipal-map {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 100%;
+}
+
+.direccion-municipal-map__iframe {
+    width: 100%;
+    min-height: 340px;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+}
+
+.direccion-municipal-map__empty {
+    margin: 0;
+    color: var(--color-muted);
+}
+
+.direccion-municipal-content {
+    margin-bottom: clamp(0.9rem, 2vw, 1.25rem);
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+}
+
+.direccion-municipal-content p,
+.direccion-municipal-content li,
+.direccion-municipal-content blockquote,
+.direccion-municipal-content .wp-block-paragraph,
+.direccion-municipal-content .wp-block-list {
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+}
+
+.direccion-municipal-content p {
+    margin: 0 0 0.62rem;
+    font-size: 1.02rem;
+    line-height: 1.48;
+}
+
+.direccion-municipal-content li {
+    margin: 0 0 0.3rem;
+    font-size: 1.02rem;
+    line-height: 1.45;
+}
+
+.direccion-municipal-content ul,
+.direccion-municipal-content ol {
+    margin: 0 0 0.75rem;
+    padding-left: 1.2rem;
+}
+
+.direccion-municipal-content .wp-block-heading {
+    margin: 0.2rem 0 0.55rem;
+}
+
+.direccion-municipal-accordion-wrap {
+    margin-bottom: clamp(0.95rem, 2.2vw, 1.3rem);
+}
+
+.direccion-municipal-accordion {
+    display: block;
+}
+
+.direccion-municipal-accordion__item {
+    margin: var(--dm-acc-margin, 0 0 1.8rem 0);
+}
+
+.direccion-municipal-accordion__item + .direccion-municipal-accordion__item {
+    margin-top: 0.8rem;
+}
+
+.direccion-municipal-accordion__item:last-child {
+    margin-bottom: 0;
+}
+
+.direccion-municipal-accordion__toggle {
+    width: 100%;
+    border: var(--dm-acc-border, 1px solid #c9d7ee);
+    border-radius: 0;
+    padding: var(--dm-acc-padding, 14px 18px);
+    background: linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
+    color: var(--color-navy);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.direccion-municipal-accordion__toggle:hover,
+.direccion-municipal-accordion__toggle:focus-visible {
+    background: linear-gradient(180deg, #edf4ff 0%, #e3efff 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(16, 45, 83, 0.12);
+}
+
+.direccion-municipal-accordion__toggle.is-active {
+    background: linear-gradient(180deg, #e7f1ff 0%, #dae9ff 100%);
+}
+
+.direccion-municipal-accordion__icon {
+    transition: transform 0.2s ease;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+.direccion-municipal-accordion__toggle[aria-expanded='true'] .direccion-municipal-accordion__icon {
+    transform: rotate(180deg);
+}
+
+.direccion-municipal-accordion__panel {
+    border: 0;
+    border-radius: 0;
+    margin-top: 0.44rem;
+    padding: clamp(0.82rem, 1.7vw, 1rem);
+    background: #ffffff;
+}
+
+.direccion-municipal-accordion__panel > :first-child {
+    margin-top: 0;
+}
+
+.direccion-municipal-accordion__panel > :last-child {
+    margin-bottom: 0;
+}
+
+.direccion-municipal-subtabs {
+    margin-top: 0.85rem;
+    text-align: start;
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title a {
+    color: inherit;
+}
+
+.direccion-municipal-subtabs .elementor-accordion-item {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+}
+
+.direccion-municipal-subtabs .elementor-accordion-item + .elementor-accordion-item {
+    border-top: 0;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title {
+    cursor: pointer;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 0;
+    outline: none;
+    padding: 14px 16px;
+    background: #ffffff;
+    color: #0f2343;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    border-radius: 0;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    height: 1.25em;
+    float: none;
+    text-align: center;
+    margin-left: auto;
+    color: #2f4f78;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon svg {
+    height: 1em;
+    width: 1em;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon i {
+    font-style: normal;
+    line-height: 1;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon.elementor-accordion-icon-right {
+    margin-left: auto;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon.elementor-accordion-icon-left {
+    margin-left: auto;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon .elementor-accordion-icon-closed {
+    display: block;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon .elementor-accordion-icon-opened,
+.direccion-municipal-subtabs .elementor-tab-title.elementor-active .elementor-accordion-icon-closed {
+    display: none;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title.elementor-active .elementor-accordion-icon-opened {
+    display: block;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title.elementor-active {
+    background: #f3f7fd;
+    color: #0d2447;
+}
+
+.direccion-municipal-subtabs .elementor-tab-content {
+    border-top: 1px solid #e4eaf2;
+    display: none;
+    padding: 14px 16px 16px;
+    background: #fafcff;
+    color: #1d314f;
+    border-radius: 0;
+}
+
+.direccion-municipal-subtabs .elementor-accordion-title {
+    display: block;
+    flex: 1 1 auto;
+}
+
+.direccion-municipal-subtabs__empty {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    color: var(--color-muted);
+    font-style: italic;
+}
+
+@media (max-width: 767px) {
+    .direccion-municipal-subtabs .elementor-tab-title {
+        padding: 12px 14px;
+    }
+
+    .direccion-municipal-subtabs .elementor-tab-title .elementor-accordion-icon {
+        width: 1.15em;
+        height: 1.15em;
+    }
+
+    .direccion-municipal-subtabs .elementor-tab-content {
+        padding: 11px 14px 13px;
+    }
+}
+
+.direccion-municipal-custom {
+    margin-top: 0.35rem;
+}
+
 .content-single article {
     background: #ffffff;
     border: 1px solid var(--color-line);
@@ -1615,6 +2042,14 @@ body.has-news-gallery-lightbox {
     .aviso-single-layout {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+
+    .direccion-municipal-single__intro {
+        grid-template-columns: 1fr;
+    }
+
+    .direccion-municipal-map__iframe {
+        min-height: 280px;
     }
 
     .aviso-single-layout__left {

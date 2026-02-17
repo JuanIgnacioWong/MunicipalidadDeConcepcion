@@ -373,8 +373,116 @@
         galleries.forEach((gallery) => initNewsGallery(gallery));
     };
 
+    const initDireccionAccordion = (accordion) => {
+        const items = Array.from(accordion.querySelectorAll('[data-direccion-accordion-item]'));
+        if (items.length === 0) {
+            return;
+        }
+
+        items.forEach((item, index) => {
+            const button = item.querySelector('[data-direccion-accordion-toggle]');
+            const panel = item.querySelector('[data-direccion-accordion-panel]');
+            if (!button || !panel) {
+                return;
+            }
+
+            const isInitiallyOpen = index === 0 && !panel.hasAttribute('hidden');
+            button.setAttribute('aria-expanded', isInitiallyOpen ? 'true' : 'false');
+            button.classList.toggle('is-active', isInitiallyOpen);
+
+            button.addEventListener('click', () => {
+                const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                const nextState = !isExpanded;
+                button.setAttribute('aria-expanded', nextState ? 'true' : 'false');
+                button.classList.toggle('is-active', nextState);
+
+                if (nextState) {
+                    panel.removeAttribute('hidden');
+                } else {
+                    panel.setAttribute('hidden', 'hidden');
+                }
+            });
+        });
+    };
+
+    const initDireccionSubtabs = (subtabsRoot) => {
+        const items = Array.from(subtabsRoot.querySelectorAll('[data-direccion-subtab-item]'));
+        if (items.length === 0) {
+            return;
+        }
+
+        const setItemState = (button, panel, shouldOpen) => {
+            button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            button.classList.toggle('elementor-active', shouldOpen);
+
+            if (shouldOpen) {
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+            }
+        };
+
+        const entries = items
+            .map((item) => {
+                const button = item.querySelector('[data-direccion-subtab-toggle]');
+                const panel = item.querySelector('[data-direccion-subtab-panel]');
+                if (!button || !panel) {
+                    return null;
+                }
+                return { button, panel };
+            })
+            .filter(Boolean);
+
+        entries.forEach((entry) => {
+            const { button, panel } = entry;
+            const isInitiallyOpen = button.getAttribute('aria-expanded') === 'true' || button.classList.contains('elementor-active');
+            setItemState(button, panel, isInitiallyOpen);
+        });
+
+        entries.forEach((entry) => {
+            const { button, panel } = entry;
+            const closeOthers = () => {
+                entries.forEach((otherEntry) => {
+                    if (otherEntry.button !== button) {
+                        setItemState(otherEntry.button, otherEntry.panel, false);
+                    }
+                });
+            };
+
+            const toggle = () => {
+                const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                if (isExpanded) {
+                    setItemState(button, panel, false);
+                    return;
+                }
+                closeOthers();
+                setItemState(button, panel, true);
+            };
+
+            button.addEventListener('click', () => {
+                toggle();
+            });
+
+            button.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggle();
+                }
+            });
+        });
+    };
+
+    const initDireccionAccordions = () => {
+        const accordions = document.querySelectorAll('[data-direccion-accordion]');
+        accordions.forEach((accordion) => initDireccionAccordion(accordion));
+
+        const subtabs = document.querySelectorAll('[data-direccion-subtabs]');
+        subtabs.forEach((subtabsRoot) => initDireccionSubtabs(subtabsRoot));
+    };
+
     initNavigation();
     initHeroSliders();
     initAvisosCarousels();
     initNewsGalleries();
+    initDireccionAccordions();
 })();
