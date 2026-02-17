@@ -30,6 +30,55 @@
     align-items: center;
 }
 
+.sitio-cero-dm-resource-blocks {
+    display: grid;
+    gap: 12px;
+}
+
+.sitio-cero-dm-resource-blocks__list {
+    display: grid;
+    gap: 12px;
+}
+
+.sitio-cero-dm-resource-block {
+    display: grid;
+    gap: 10px;
+    border: 1px solid #d7dde7;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.sitio-cero-dm-resource-block__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sitio-cero-dm-resource-block__head strong {
+    color: #0f2343;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.sitio-cero-dm-embed-picker {
+    display: grid;
+    gap: 6px;
+}
+
+.sitio-cero-dm-embed-picker__controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.sitio-cero-dm-embed-picker .description {
+    margin: 0;
+}
+
 .sitio-cero-dm-accordion {
     display: grid;
     gap: 10px;
@@ -103,6 +152,10 @@
 @media (max-width: 980px) {
     .sitio-cero-dm-grid,
     .sitio-cero-dm-grid--styles {
+        grid-template-columns: 1fr;
+    }
+
+    .sitio-cero-dm-embed-picker__controls {
         grid-template-columns: 1fr;
     }
 }

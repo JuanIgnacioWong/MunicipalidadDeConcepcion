@@ -49,17 +49,109 @@ get_header();
             $map_src = 'https://www.google.com/maps?q=' . rawurlencode($direccion) . '&output=embed';
         }
 
-        $accordion_items = function_exists('sitio_cero_get_direccion_accordion_items')
-            ? sitio_cero_get_direccion_accordion_items($post_id)
+        $recursos_titulo = get_post_meta($post_id, 'sitio_cero_direccion_recursos_titulo', true);
+        $resource_blocks = function_exists('sitio_cero_get_direccion_resource_blocks')
+            ? sitio_cero_get_direccion_resource_blocks($post_id)
             : array();
+
+        if (!is_string($recursos_titulo)) {
+            $recursos_titulo = '';
+        }
 
         $allowed_html = function_exists('sitio_cero_get_direccion_allowed_html')
             ? sitio_cero_get_direccion_allowed_html()
             : wp_kses_allowed_html('post');
 
+        if (empty($resource_blocks)) {
+            $legacy_documentos_raw = get_post_meta($post_id, 'sitio_cero_direccion_documentos', true);
+            $legacy_archivos_raw = get_post_meta($post_id, 'sitio_cero_direccion_archivos', true);
+            $legacy_documentos_titulo = get_post_meta($post_id, 'sitio_cero_direccion_documentos_titulo', true);
+            $legacy_archivos_titulo = get_post_meta($post_id, 'sitio_cero_direccion_archivos_titulo', true);
+            $legacy_documentos_html = get_post_meta($post_id, 'sitio_cero_direccion_documentos_html', true);
+            $legacy_archivos_html = get_post_meta($post_id, 'sitio_cero_direccion_archivos_html', true);
+
+            if (!is_string($legacy_documentos_raw)) {
+                $legacy_documentos_raw = '';
+            }
+            if (!is_string($legacy_archivos_raw)) {
+                $legacy_archivos_raw = '';
+            }
+            if (!is_string($legacy_documentos_titulo)) {
+                $legacy_documentos_titulo = '';
+            }
+            if (!is_string($legacy_archivos_titulo)) {
+                $legacy_archivos_titulo = '';
+            }
+            if (!is_string($legacy_documentos_html)) {
+                $legacy_documentos_html = '';
+            }
+            if (!is_string($legacy_archivos_html)) {
+                $legacy_archivos_html = '';
+            }
+
+            if ('' !== trim($legacy_documentos_raw) || '' !== trim($legacy_documentos_titulo) || '' !== trim((string) wp_strip_all_tags($legacy_documentos_html))) {
+                $resource_blocks[] = array(
+                    'type'  => 'documentos',
+                    'title' => '' !== trim($legacy_documentos_titulo) ? $legacy_documentos_titulo : __('Documentos', 'sitio-cero'),
+                    'html'  => $legacy_documentos_html,
+                    'links' => $legacy_documentos_raw,
+                );
+            }
+
+            if ('' !== trim($legacy_archivos_raw) || '' !== trim($legacy_archivos_titulo) || '' !== trim((string) wp_strip_all_tags($legacy_archivos_html))) {
+                $resource_blocks[] = array(
+                    'type'  => 'archivos',
+                    'title' => '' !== trim($legacy_archivos_titulo) ? $legacy_archivos_titulo : __('Archivos', 'sitio-cero'),
+                    'html'  => $legacy_archivos_html,
+                    'links' => $legacy_archivos_raw,
+                );
+            }
+        }
+
+        $resource_blocks_view = array();
+        foreach ($resource_blocks as $resource_block) {
+            if (!is_array($resource_block)) {
+                continue;
+            }
+
+            $block_type = isset($resource_block['type']) ? sanitize_key((string) $resource_block['type']) : 'documentos';
+            if (!in_array($block_type, array('documentos', 'archivos'), true)) {
+                $block_type = 'documentos';
+            }
+
+            $block_title = isset($resource_block['title']) ? sanitize_text_field((string) $resource_block['title']) : '';
+            if ('' === $block_title) {
+                $block_title = 'archivos' === $block_type
+                    ? __('Archivos', 'sitio-cero')
+                    : __('Documentos', 'sitio-cero');
+            }
+
+            $block_html_raw = isset($resource_block['html']) ? (string) $resource_block['html'] : '';
+            $block_html = '';
+            if ('' !== trim($block_html_raw)) {
+                $block_html = do_shortcode(wp_kses($block_html_raw, $allowed_html));
+            }
+
+            $block_links_raw = isset($resource_block['links']) ? (string) $resource_block['links'] : '';
+            $block_items = function_exists('sitio_cero_parse_aviso_links_textarea')
+                ? sitio_cero_parse_aviso_links_textarea($block_links_raw)
+                : array();
+
+            if (empty($block_items) && '' === trim($block_html)) {
+                continue;
+            }
+
+            $resource_blocks_view[] = array(
+                'type'  => $block_type,
+                'title' => $block_title,
+                'html'  => $block_html,
+                'items' => $block_items,
+            );
+        }
+
         $custom_html_output = '';
         if ('' !== trim($custom_html)) {
-            $custom_html_output = wp_kses($custom_html, $allowed_html);
+            $custom_html_output = do_shortcode(wp_kses($custom_html, $allowed_html));
         }
 
         $custom_css_output = '';
@@ -157,87 +249,54 @@ get_header();
                 </aside>
             </div>
 
-            <?php if (!empty($accordion_items)) : ?>
+            <?php if (!empty($resource_blocks_view)) : ?>
                 <section class="direccion-municipal-accordion-wrap">
-                    <h2><?php esc_html_e('Tematicas y pestañas', 'sitio-cero'); ?></h2>
-                    <div class="direccion-municipal-accordion" data-direccion-accordion>
-                        <?php foreach ($accordion_items as $index => $item) : ?>
+                    <h2><?php echo esc_html('' !== trim($recursos_titulo) ? $recursos_titulo : __('Documentos y archivos', 'sitio-cero')); ?></h2>
+                    <div class="aviso-single-layout__left">
+                        <?php foreach ($resource_blocks_view as $block) : ?>
                             <?php
-                            if (!is_array($item)) {
+                            if (!is_array($block)) {
                                 continue;
                             }
-
-                            $item_title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
-                            $item_border = isset($item['border']) ? (string) $item['border'] : '';
-                            $item_margin = isset($item['margin']) ? (string) $item['margin'] : '';
-                            $item_padding = isset($item['padding']) ? (string) $item['padding'] : '';
-                            $item_subtabs = isset($item['subtabs']) && is_array($item['subtabs']) ? $item['subtabs'] : array();
-                            $is_open = 0 === (int) $index;
-
-                            $style_parts = array();
-                            if ('' !== $item_border) {
-                                $style_parts[] = '--dm-acc-border:' . $item_border;
-                            }
-                            if ('' !== $item_margin) {
-                                $style_parts[] = '--dm-acc-margin:' . $item_margin;
-                            }
-                            if ('' !== $item_padding) {
-                                $style_parts[] = '--dm-acc-padding:' . $item_padding;
-                            }
+                            $block_title = isset($block['title']) ? sanitize_text_field((string) $block['title']) : '';
+                            $block_type = isset($block['type']) ? sanitize_key((string) $block['type']) : 'documentos';
+                            $block_html = isset($block['html']) ? (string) $block['html'] : '';
+                            $block_items = isset($block['items']) && is_array($block['items']) ? $block['items'] : array();
                             ?>
-                            <article class="direccion-municipal-accordion__item" data-direccion-accordion-item style="<?php echo esc_attr(implode(';', $style_parts)); ?>">
-                                <button type="button" class="direccion-municipal-accordion__toggle" data-direccion-accordion-toggle aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>">
-                                    <span><?php echo esc_html($item_title); ?></span>
-                                    <span class="material-symbols-rounded direccion-municipal-accordion__icon" aria-hidden="true">expand_more</span>
-                                </button>
-                                <div class="direccion-municipal-accordion__panel" data-direccion-accordion-panel <?php echo $is_open ? '' : 'hidden'; ?>>
-                                    <?php if (!empty($item_subtabs)) : ?>
-                                        <div class="direccion-municipal-subtabs elementor-accordion" data-direccion-subtabs>
-                                            <?php foreach ($item_subtabs as $subtab_index => $subtab) : ?>
-                                                <?php
-                                                if (!is_array($subtab)) {
-                                                    continue;
-                                                }
-                                                $subtab_title = isset($subtab['title']) ? sanitize_text_field((string) $subtab['title']) : '';
-                                                $subtab_content = isset($subtab['content']) ? wp_kses((string) $subtab['content'], $allowed_html) : '';
-                                                $subtab_number = (int) $subtab_index + 1;
-                                                $subtab_id = 'direccion-subtab-' . $post_id . '-' . $index . '-' . $subtab_index;
-                                                ?>
-                                                <article class="direccion-municipal-subtabs__item elementor-accordion-item" data-direccion-subtab-item>
-                                                    <div
-                                                        id="elementor-tab-title-<?php echo esc_attr($subtab_id); ?>"
-                                                        class="direccion-municipal-subtabs__toggle elementor-tab-title"
-                                                        data-direccion-subtab-toggle
-                                                        data-tab="<?php echo esc_attr((string) $subtab_number); ?>"
-                                                        role="button"
-                                                        tabindex="0"
-                                                        aria-controls="elementor-tab-content-<?php echo esc_attr($subtab_id); ?>"
-                                                        aria-expanded="false"
-                                                    >
-                                                        <span class="elementor-accordion-icon elementor-accordion-icon-left" aria-hidden="true">
-                                                            <span class="elementor-accordion-icon-closed"><i class="fas fa-plus" aria-hidden="true">+</i></span>
-                                                            <span class="elementor-accordion-icon-opened"><i class="fas fa-minus" aria-hidden="true">-</i></span>
-                                                        </span>
-                                                        <a class="elementor-accordion-title" tabindex="0"><?php echo esc_html($subtab_title); ?></a>
-                                                    </div>
-                                                    <div
-                                                        id="elementor-tab-content-<?php echo esc_attr($subtab_id); ?>"
-                                                        class="direccion-municipal-subtabs__panel elementor-tab-content elementor-clearfix"
-                                                        data-direccion-subtab-panel
-                                                        data-tab="<?php echo esc_attr((string) $subtab_number); ?>"
-                                                        role="region"
-                                                        aria-labelledby="elementor-tab-title-<?php echo esc_attr($subtab_id); ?>"
-                                                    >
-                                                        <?php echo $subtab_content; ?>
-                                                    </div>
-                                                </article>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php else : ?>
-                                        <p class="direccion-municipal-subtabs__empty"><?php esc_html_e('Sin pestañas en este item.', 'sitio-cero'); ?></p>
-                                    <?php endif; ?>
-                                </div>
-                            </article>
+                            <section class="aviso-single-block">
+                                <h2><?php echo esc_html($block_title); ?></h2>
+                                <?php if ('' !== trim($block_html)) : ?>
+                                    <div class="aviso-single-block__content">
+                                        <?php echo $block_html; ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($block_items)) : ?>
+                                    <ul class="aviso-single-list">
+                                        <?php foreach ($block_items as $item) : ?>
+                                            <?php if (!is_array($item) || empty($item['url'])) {
+                                                continue;
+                                            } ?>
+                                            <?php
+                                            $icon_key = isset($item['icon']) ? (string) $item['icon'] : '';
+                                            if ('' === $icon_key && function_exists('sitio_cero_detect_aviso_file_icon_by_url')) {
+                                                $icon_key = sitio_cero_detect_aviso_file_icon_by_url((string) $item['url']);
+                                            }
+                                            $icon_key = is_string($icon_key) ? $icon_key : 'file';
+                                            $icon_symbol = function_exists('sitio_cero_get_aviso_file_icon_symbol')
+                                                ? sitio_cero_get_aviso_file_icon_symbol($icon_key)
+                                                : 'attach_file';
+                                            $fallback_label = 'archivos' === $block_type ? 'Archivo' : 'Documento';
+                                            ?>
+                                            <li>
+                                                <a class="aviso-single-file-btn aviso-single-file-btn--<?php echo esc_attr($icon_key); ?>" href="<?php echo esc_url($item['url']); ?>" target="_blank" rel="noopener noreferrer">
+                                                    <span class="material-symbols-rounded aviso-single-file-btn__icon" aria-hidden="true"><?php echo esc_html($icon_symbol); ?></span>
+                                                    <span class="aviso-single-file-btn__text"><?php echo esc_html(isset($item['label']) ? (string) $item['label'] : $fallback_label); ?></span>
+                                                </a>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
+                            </section>
                         <?php endforeach; ?>
                     </div>
                 </section>

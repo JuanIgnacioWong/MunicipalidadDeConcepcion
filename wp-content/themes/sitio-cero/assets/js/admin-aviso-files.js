@@ -149,14 +149,20 @@
     };
 
     const initField = (fieldElement) => {
-        const $field = $(fieldElement);
+        const $field = $(fieldElement).first();
         const $list = $field.find('[data-file-list]');
         const $addButton = $field.find('.sitio-cero-aviso-files__add');
         const $libraryButton = $field.find('.sitio-cero-aviso-files__library');
 
-        if ($list.length === 0) {
+        if ($field.length === 0 || !$field.hasClass('sitio-cero-aviso-files') || $list.length === 0) {
             return;
         }
+
+        if ($field.attr('data-aviso-files-initialized') === '1') {
+            return;
+        }
+
+        $field.attr('data-aviso-files-initialized', '1');
 
         if ($list.find('[data-file-row]').length === 0) {
             addRow($field, {});
@@ -212,9 +218,26 @@
         });
     };
 
-    $(() => {
-        $('.sitio-cero-aviso-files').each((_, element) => {
+    const initWithin = (target) => {
+        const $target = target ? $(target) : $(document);
+        const $fields = $target.hasClass('sitio-cero-aviso-files')
+            ? $target
+            : $target.find('.sitio-cero-aviso-files');
+
+        $fields.each((_, element) => {
             initField(element);
         });
+    };
+
+    window.sitioCeroInitAvisoFilesField = (target) => {
+        initWithin(target || document);
+    };
+
+    $(document).on('sitio-cero:init-aviso-files', (_event, target) => {
+        initWithin(target || document);
+    });
+
+    $(() => {
+        initWithin(document);
     });
 })(jQuery);

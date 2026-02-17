@@ -1,0 +1,22 @@
+.sitio-cero-acordeon-embed-admin {
+    display: grid;
+    gap: 12px;
+}
+
+.sitio-cero-acordeon-embed-admin__list {
+    display: grid;
+    gap: 12px;
+}
+
+.sitio-cero-acordeon-embed-admin__row {
+    border: 1px solid #dcdcde;
+    background: #fff;
+    padding: 12px;
+}
+
+.sitio-cero-acordeon-embed-admin__row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}

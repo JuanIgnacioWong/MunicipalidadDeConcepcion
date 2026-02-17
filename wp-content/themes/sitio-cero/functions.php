@@ -190,7 +190,33 @@ function sitio_cero_enqueue_direccion_municipal_admin_assets($hook_suffix)
 
     $version = wp_get_theme()->get('Version');
 
-    wp_enqueue_script('jquery-ui-sortable');
+    wp_enqueue_media();
+
+    wp_enqueue_style(
+        'sitio-cero-admin-aviso-files',
+        get_template_directory_uri() . '/assets/css/admin-aviso-files.css',
+        array(),
+        $version
+    );
+
+    wp_enqueue_script(
+        'sitio-cero-admin-aviso-files',
+        get_template_directory_uri() . '/assets/js/admin-aviso-files.js',
+        array('jquery'),
+        $version,
+        true
+    );
+
+    wp_localize_script(
+        'sitio-cero-admin-aviso-files',
+        'sitioCeroAvisoFiles',
+        array(
+            'frameTitle'  => __('Selecciona archivos', 'sitio-cero'),
+            'frameButton' => __('Agregar archivos', 'sitio-cero'),
+            'addItemText' => __('Agregar item manual', 'sitio-cero'),
+            'removeText'  => __('Quitar', 'sitio-cero'),
+        )
+    );
 
     wp_enqueue_style(
         'sitio-cero-admin-direccion-municipal',
@@ -202,7 +228,7 @@ function sitio_cero_enqueue_direccion_municipal_admin_assets($hook_suffix)
     wp_enqueue_script(
         'sitio-cero-admin-direccion-municipal',
         get_template_directory_uri() . '/assets/js/admin-direccion-municipal.js',
-        array('jquery', 'jquery-ui-sortable'),
+        array('jquery'),
         $version,
         true
     );
@@ -211,9 +237,10 @@ function sitio_cero_enqueue_direccion_municipal_admin_assets($hook_suffix)
         'sitio-cero-admin-direccion-municipal',
         'sitioCeroDireccionMunicipal',
         array(
-            'phoneLabel'     => __('Telefono', 'sitio-cero'),
-            'accordionLabel' => __('Acordeon', 'sitio-cero'),
-            'removeText'     => __('Quitar', 'sitio-cero'),
+            'phoneLabel'             => __('Telefono', 'sitio-cero'),
+            'resourceBlockLabel'     => __('Bloque', 'sitio-cero'),
+            'removeText'             => __('Quitar', 'sitio-cero'),
+            'selectAccordionMessage' => __('Selecciona un acordeon para insertarlo.', 'sitio-cero'),
         )
     );
 }
@@ -490,7 +517,7 @@ function sitio_cero_seed_default_footer_columns()
         return;
     }
 
-    $seed_version = '1';
+    $seed_version = '3';
     $already_seeded_version = (string) get_option('sitio_cero_default_footer_columns_seeded_version', '');
     if ($seed_version === $already_seeded_version) {
         return;
@@ -766,6 +793,66 @@ function sitio_cero_get_direccion_accordion_items($post_id)
     return $items;
 }
 
+function sitio_cero_sanitize_direccion_resource_blocks($value)
+{
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        $value = is_array($decoded) ? $decoded : array();
+    }
+
+    if (!is_array($value)) {
+        return array();
+    }
+
+    $blocks = array();
+    foreach ($value as $block) {
+        if (!is_array($block)) {
+            continue;
+        }
+
+        $title = isset($block['title']) ? sanitize_text_field((string) $block['title']) : '';
+        $type = isset($block['type']) ? sanitize_key((string) $block['type']) : 'documentos';
+        if (!in_array($type, array('documentos', 'archivos'), true)) {
+            $type = 'documentos';
+        }
+
+        $html = isset($block['html']) ? sitio_cero_sanitize_direccion_html((string) $block['html']) : '';
+        $links = isset($block['links']) ? sitio_cero_sanitize_aviso_links_textarea((string) $block['links']) : '';
+
+        if (
+            '' === $title
+            && '' === trim((string) wp_strip_all_tags($html))
+            && '' === trim($links)
+        ) {
+            continue;
+        }
+
+        $blocks[] = array(
+            'title' => $title,
+            'type'  => $type,
+            'html'  => $html,
+            'links' => $links,
+        );
+    }
+
+    return $blocks;
+}
+
+function sitio_cero_get_direccion_resource_blocks($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return array();
+    }
+
+    $raw_blocks = get_post_meta($post_id, 'sitio_cero_direccion_resource_blocks', true);
+    if (!is_array($raw_blocks)) {
+        return array();
+    }
+
+    return sitio_cero_sanitize_direccion_resource_blocks($raw_blocks);
+}
+
 function sitio_cero_render_direccion_municipal_metabox($post)
 {
     wp_nonce_field('sitio_cero_save_direccion_municipal_meta', 'sitio_cero_direccion_municipal_meta_nonce');
@@ -807,23 +894,100 @@ function sitio_cero_render_direccion_municipal_metabox($post)
         $custom_css = '';
     }
 
-    $accordion_items = sitio_cero_get_direccion_accordion_items($post->ID);
-    if (empty($accordion_items)) {
-        $accordion_items = array(
+    $documentos = get_post_meta($post->ID, 'sitio_cero_direccion_documentos', true);
+    if (!is_string($documentos)) {
+        $documentos = '';
+    }
+    $archivos = get_post_meta($post->ID, 'sitio_cero_direccion_archivos', true);
+    if (!is_string($archivos)) {
+        $archivos = '';
+    }
+    $recursos_titulo = get_post_meta($post->ID, 'sitio_cero_direccion_recursos_titulo', true);
+    if (!is_string($recursos_titulo)) {
+        $recursos_titulo = '';
+    }
+    $documentos_titulo = get_post_meta($post->ID, 'sitio_cero_direccion_documentos_titulo', true);
+    if (!is_string($documentos_titulo)) {
+        $documentos_titulo = '';
+    }
+    $archivos_titulo = get_post_meta($post->ID, 'sitio_cero_direccion_archivos_titulo', true);
+    if (!is_string($archivos_titulo)) {
+        $archivos_titulo = '';
+    }
+    $documentos_html = get_post_meta($post->ID, 'sitio_cero_direccion_documentos_html', true);
+    if (!is_string($documentos_html)) {
+        $documentos_html = '';
+    }
+    $archivos_html = get_post_meta($post->ID, 'sitio_cero_direccion_archivos_html', true);
+    if (!is_string($archivos_html)) {
+        $archivos_html = '';
+    }
+    $icon_options = sitio_cero_get_aviso_file_icon_options();
+    $resource_type_options = array(
+        'documentos' => __('Documentos', 'sitio-cero'),
+        'archivos'   => __('Archivos', 'sitio-cero'),
+    );
+    $acordeon_embed_options = array();
+    if (post_type_exists('acordeon_embed')) {
+        $acordeon_posts = get_posts(
             array(
-                'title'   => __('Funciones principales', 'sitio-cero'),
-                'border'  => '1px solid #c9d7ee',
-                'margin'  => '0 0 12px 0',
-                'padding' => '14px 18px',
-                'subtabs' => array(
-                    array(
-                        'title'   => __('Subpestaña de ejemplo', 'sitio-cero'),
-                        'content' => '<p>Contenido desplegable de referencia para esta subpestaña.</p>',
-                    ),
-                ),
-            ),
+                'post_type'      => 'acordeon_embed',
+                'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+                'posts_per_page' => -1,
+                'orderby'        => 'title',
+                'order'          => 'ASC',
+                'no_found_rows'  => true,
+            )
+        );
+
+        foreach ($acordeon_posts as $acordeon_post) {
+            if (!$acordeon_post instanceof WP_Post) {
+                continue;
+            }
+
+            $post_title = trim((string) $acordeon_post->post_title);
+            if ('' === $post_title) {
+                $post_title = sprintf(__('Acordeon #%d', 'sitio-cero'), (int) $acordeon_post->ID);
+            }
+
+            $acordeon_embed_options[] = array(
+                'id'    => (int) $acordeon_post->ID,
+                'title' => sanitize_text_field($post_title),
+            );
+        }
+    }
+
+    $resource_blocks = sitio_cero_get_direccion_resource_blocks($post->ID);
+
+    if (empty($resource_blocks)) {
+        if ('' !== trim($documentos) || '' !== trim((string) wp_strip_all_tags($documentos_html)) || '' !== trim($documentos_titulo)) {
+            $resource_blocks[] = array(
+                'title' => '' !== trim($documentos_titulo) ? $documentos_titulo : __('Documentos', 'sitio-cero'),
+                'type'  => 'documentos',
+                'html'  => $documentos_html,
+                'links' => $documentos,
+            );
+        }
+
+        if ('' !== trim($archivos) || '' !== trim((string) wp_strip_all_tags($archivos_html)) || '' !== trim($archivos_titulo)) {
+            $resource_blocks[] = array(
+                'title' => '' !== trim($archivos_titulo) ? $archivos_titulo : __('Archivos', 'sitio-cero'),
+                'type'  => 'archivos',
+                'html'  => $archivos_html,
+                'links' => $archivos,
+            );
+        }
+    }
+
+    if (empty($resource_blocks)) {
+        $resource_blocks[] = array(
+            'title' => __('Documentos', 'sitio-cero'),
+            'type'  => 'documentos',
+            'html'  => '',
+            'links' => '',
         );
     }
+
     ?>
     <div class="sitio-cero-dm-metabox">
         <h3><?php esc_html_e('Columna 1: Organizacion', 'sitio-cero'); ?></h3>
@@ -874,144 +1038,197 @@ function sitio_cero_render_direccion_municipal_metabox($post)
         </p>
 
         <hr>
-        <h3><?php esc_html_e('Items por tematica (drag & drop)', 'sitio-cero'); ?></h3>
-        <p class="description"><?php esc_html_e('Cada item usa solo titulo (sin contenido) y permite pestañas desplegables ilimitadas. Puedes agregar todos los items tematicos que necesites.', 'sitio-cero'); ?></p>
+        <h3><?php esc_html_e('Documentos y archivos', 'sitio-cero'); ?></h3>
 
-        <div class="sitio-cero-dm-accordion" data-accordion-root>
-            <div class="sitio-cero-dm-accordion__list" data-accordion-list>
-                <?php foreach ($accordion_items as $index => $item) : ?>
+        <p>
+            <label for="sitio_cero_direccion_recursos_titulo"><strong><?php esc_html_e('Titulo principal de la seccion (opcional)', 'sitio-cero'); ?></strong></label>
+            <input id="sitio_cero_direccion_recursos_titulo" name="sitio_cero_direccion_recursos_titulo" type="text" class="widefat" value="<?php echo esc_attr($recursos_titulo); ?>" placeholder="<?php esc_attr_e('Ejemplo: Documentos y archivos', 'sitio-cero'); ?>">
+        </p>
+        <p class="description"><?php esc_html_e('Puedes crear bloques ilimitados. Cada bloque permite definir tipo (documentos o archivos), titulo, texto/HTML embebido e items con enlace e icono.', 'sitio-cero'); ?></p>
+
+        <div class="sitio-cero-dm-resource-blocks" data-dm-resource-blocks>
+            <div class="sitio-cero-dm-resource-blocks__list" data-dm-resource-blocks-list>
+                <?php foreach ($resource_blocks as $block_index => $resource_block) : ?>
                     <?php
-                    $item_title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
-                    $item_border = isset($item['border']) ? sitio_cero_sanitize_css_shorthand((string) $item['border'], 80) : '';
-                    $item_margin = isset($item['margin']) ? sitio_cero_sanitize_css_shorthand((string) $item['margin'], 60) : '';
-                    $item_padding = isset($item['padding']) ? sitio_cero_sanitize_css_shorthand((string) $item['padding'], 60) : '';
-                    $item_subtabs = isset($item['subtabs']) ? sitio_cero_sanitize_direccion_subtabs($item['subtabs']) : array();
-                    $item_subtabs_json = wp_json_encode($item_subtabs);
-                    if (!is_string($item_subtabs_json)) {
-                        $item_subtabs_json = '[]';
+                    $block_type = isset($resource_block['type']) ? sanitize_key((string) $resource_block['type']) : 'documentos';
+                    if (!in_array($block_type, array('documentos', 'archivos'), true)) {
+                        $block_type = 'documentos';
                     }
+                    $block_title = isset($resource_block['title']) ? sanitize_text_field((string) $resource_block['title']) : '';
+                    $block_html = isset($resource_block['html']) ? (string) $resource_block['html'] : '';
+                    $block_links = isset($resource_block['links']) ? (string) $resource_block['links'] : '';
+                    $block_links_items = sitio_cero_parse_aviso_links_textarea($block_links);
+                    $block_key = 'existing-' . $block_index;
+                    $block_html_id = 'sitio_cero_direccion_resource_block_html_' . $block_key;
+                    $block_links_id = 'sitio_cero_direccion_resource_block_links_' . $block_key;
                     ?>
-                    <div class="sitio-cero-dm-accordion__row" data-accordion-row>
-                        <div class="sitio-cero-dm-accordion__row-head">
-                            <button type="button" class="button-link sitio-cero-dm-accordion__drag" data-accordion-drag aria-label="<?php esc_attr_e('Mover', 'sitio-cero'); ?>">
-                                <span class="dashicons dashicons-move"></span>
-                            </button>
-                            <strong><?php echo esc_html(sprintf(__('Item %d', 'sitio-cero'), (int) $index + 1)); ?></strong>
-                            <button type="button" class="button-link-delete" data-accordion-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    <div class="sitio-cero-dm-resource-block" data-dm-resource-block-row>
+                        <div class="sitio-cero-dm-resource-block__head">
+                            <strong><?php echo esc_html(sprintf(__('Bloque %d', 'sitio-cero'), $block_index + 1)); ?></strong>
+                            <button type="button" class="button-link-delete" data-dm-resource-block-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
                         </div>
-                        <p>
-                            <label><strong><?php esc_html_e('Titulo del item', 'sitio-cero'); ?></strong></label>
-                            <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_titulo[]" value="<?php echo esc_attr($item_title); ?>" placeholder="<?php esc_attr_e('Ejemplo: Atencion ciudadana', 'sitio-cero'); ?>">
-                        </p>
-                        <div class="sitio-cero-dm-grid sitio-cero-dm-grid--styles">
+                        <div class="sitio-cero-dm-grid">
                             <p>
-                                <label><strong><?php esc_html_e('Border del boton', 'sitio-cero'); ?></strong></label>
-                                <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_border[]" value="<?php echo esc_attr($item_border); ?>" placeholder="1px solid #c9d7ee">
+                                <label><strong><?php esc_html_e('Titulo del bloque', 'sitio-cero'); ?></strong></label>
+                                <input type="text" class="widefat" name="sitio_cero_direccion_resource_block_title[]" value="<?php echo esc_attr($block_title); ?>" placeholder="<?php esc_attr_e('Ejemplo: Documentos tributarios', 'sitio-cero'); ?>">
                             </p>
                             <p>
-                                <label><strong><?php esc_html_e('Margin del boton', 'sitio-cero'); ?></strong></label>
-                                <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_margin[]" value="<?php echo esc_attr($item_margin); ?>" placeholder="0 0 12px 0">
-                            </p>
-                            <p>
-                                <label><strong><?php esc_html_e('Padding del boton', 'sitio-cero'); ?></strong></label>
-                                <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_padding[]" value="<?php echo esc_attr($item_padding); ?>" placeholder="14px 18px">
+                                <label><strong><?php esc_html_e('Tipo de bloque', 'sitio-cero'); ?></strong></label>
+                                <select class="widefat" name="sitio_cero_direccion_resource_block_type[]">
+                                    <?php foreach ($resource_type_options as $type_key => $type_label) : ?>
+                                        <option value="<?php echo esc_attr($type_key); ?>"<?php selected($block_type, $type_key); ?>><?php echo esc_html($type_label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </p>
                         </div>
 
-                        <div class="sitio-cero-dm-subtabs" data-subtabs-root>
-                            <div class="sitio-cero-dm-subtabs__head">
-                                <strong><?php esc_html_e('Subpestañas desplegables', 'sitio-cero'); ?></strong>
-                                <button type="button" class="button button-secondary" data-subtab-add><?php esc_html_e('Agregar subpestaña', 'sitio-cero'); ?></button>
+                        <p>
+                            <label><strong><?php esc_html_e('Texto / HTML / embebido del bloque (opcional)', 'sitio-cero'); ?></strong></label>
+                            <textarea id="<?php echo esc_attr($block_html_id); ?>" class="widefat" rows="5" name="sitio_cero_direccion_resource_block_html[]" placeholder="<?php esc_attr_e('Ejemplo: <p>Informacion del bloque...</p><iframe ...></iframe>', 'sitio-cero'); ?>"><?php echo esc_textarea($block_html); ?></textarea>
+                        </p>
+                        <div class="sitio-cero-dm-embed-picker">
+                            <label><strong><?php esc_html_e('Insertar acordeon embebido (opcional)', 'sitio-cero'); ?></strong></label>
+                            <div class="sitio-cero-dm-embed-picker__controls">
+                                <select class="widefat" data-embed-shortcode-select data-target="#<?php echo esc_attr($block_html_id); ?>"<?php disabled(empty($acordeon_embed_options)); ?>>
+                                    <option value=""><?php esc_html_e('Selecciona un acordeon...', 'sitio-cero'); ?></option>
+                                    <?php foreach ($acordeon_embed_options as $acordeon_option) : ?>
+                                        <option value="<?php echo esc_attr((string) $acordeon_option['id']); ?>"><?php echo esc_html($acordeon_option['title']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="button button-secondary" data-embed-shortcode-insert data-target="#<?php echo esc_attr($block_html_id); ?>"<?php disabled(empty($acordeon_embed_options)); ?>>
+                                    <?php esc_html_e('Insertar acordeon', 'sitio-cero'); ?>
+                                </button>
                             </div>
-                            <input type="hidden" name="sitio_cero_direccion_acordeon_subtabs[]" value="<?php echo esc_attr($item_subtabs_json); ?>" data-subtabs-hidden>
-                            <div class="sitio-cero-dm-subtabs__list" data-subtabs-list>
-                                <?php foreach ($item_subtabs as $subtab) : ?>
+                            <p class="description">
+                                <?php if (empty($acordeon_embed_options)) : ?>
+                                    <?php esc_html_e('Aun no hay acordeones creados. Crea uno en Acordeones para poder insertarlo.', 'sitio-cero'); ?>
+                                <?php else : ?>
+                                    <?php esc_html_e('Se insertara el shortcode del acordeon en este campo.', 'sitio-cero'); ?>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+
+                        <p><strong><?php esc_html_e('Items del bloque (titulo + enlace + icono)', 'sitio-cero'); ?></strong></p>
+                        <div class="sitio-cero-aviso-files" data-target="#<?php echo esc_attr($block_links_id); ?>">
+                            <div class="sitio-cero-aviso-files__actions">
+                                <button type="button" class="button button-secondary sitio-cero-aviso-files__library">
+                                    <?php esc_html_e('Seleccionar desde biblioteca', 'sitio-cero'); ?>
+                                </button>
+                                <button type="button" class="button button-secondary sitio-cero-aviso-files__add">
+                                    <?php esc_html_e('Agregar item manual', 'sitio-cero'); ?>
+                                </button>
+                            </div>
+                            <div class="sitio-cero-aviso-files__list" data-file-list>
+                                <?php foreach ($block_links_items as $item) : ?>
                                     <?php
-                                    $subtab_title = isset($subtab['title']) ? sanitize_text_field((string) $subtab['title']) : '';
-                                    $subtab_content = isset($subtab['content']) ? (string) $subtab['content'] : '';
+                                    $item_label = isset($item['label']) ? (string) $item['label'] : '';
+                                    $item_url = isset($item['url']) ? (string) $item['url'] : '';
+                                    $item_icon = isset($item['icon']) ? (string) $item['icon'] : '';
                                     ?>
-                                    <div class="sitio-cero-dm-subtabs__row" data-subtab-row>
-                                        <p>
-                                            <label><strong><?php esc_html_e('Titulo subpestaña', 'sitio-cero'); ?></strong></label>
-                                            <input type="text" class="widefat" value="<?php echo esc_attr($subtab_title); ?>" data-subtab-title placeholder="<?php esc_attr_e('Ejemplo: Funciones especificas', 'sitio-cero'); ?>">
-                                        </p>
-                                        <p>
-                                            <label><strong><?php esc_html_e('Contenido subpestaña', 'sitio-cero'); ?></strong></label>
-                                            <textarea class="widefat" rows="3" data-subtab-content placeholder="<?php esc_attr_e('Texto o HTML de esta subpestaña.', 'sitio-cero'); ?>"><?php echo esc_textarea($subtab_content); ?></textarea>
-                                        </p>
-                                        <button type="button" class="button-link-delete" data-subtab-remove><?php esc_html_e('Quitar subpestaña', 'sitio-cero'); ?></button>
+                                    <div class="sitio-cero-aviso-files__row" data-file-row>
+                                        <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="<?php echo esc_attr($item_label); ?>">
+                                        <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="<?php echo esc_attr($item_url); ?>">
+                                        <select class="sitio-cero-aviso-files__select" data-key="icon">
+                                            <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                                                <option value="<?php echo esc_attr($icon_key); ?>"<?php selected($item_icon, $icon_key); ?>><?php echo esc_html($icon_label); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
-                            <template data-subtab-template>
-                                <div class="sitio-cero-dm-subtabs__row" data-subtab-row>
-                                    <p>
-                                        <label><strong><?php esc_html_e('Titulo subpestaña', 'sitio-cero'); ?></strong></label>
-                                        <input type="text" class="widefat" value="" data-subtab-title placeholder="<?php esc_attr_e('Ejemplo: Funciones especificas', 'sitio-cero'); ?>">
-                                    </p>
-                                    <p>
-                                        <label><strong><?php esc_html_e('Contenido subpestaña', 'sitio-cero'); ?></strong></label>
-                                        <textarea class="widefat" rows="3" data-subtab-content placeholder="<?php esc_attr_e('Texto o HTML de esta subpestaña.', 'sitio-cero'); ?>"></textarea>
-                                    </p>
-                                    <button type="button" class="button-link-delete" data-subtab-remove><?php esc_html_e('Quitar subpestaña', 'sitio-cero'); ?></button>
+                            <template class="sitio-cero-aviso-files__template">
+                                <div class="sitio-cero-aviso-files__row" data-file-row>
+                                    <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="">
+                                    <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="">
+                                    <select class="sitio-cero-aviso-files__select" data-key="icon">
+                                        <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                                            <option value="<?php echo esc_attr($icon_key); ?>"><?php echo esc_html($icon_label); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
                                 </div>
                             </template>
                         </div>
+                        <textarea id="<?php echo esc_attr($block_links_id); ?>" name="sitio_cero_direccion_resource_block_links[]" class="widefat" rows="4" hidden><?php echo esc_textarea($block_links); ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
 
-            <button type="button" class="button button-primary" data-accordion-add><?php esc_html_e('Agregar item tematico', 'sitio-cero'); ?></button>
+            <button type="button" class="button button-primary" data-dm-resource-block-add><?php esc_html_e('Agregar bloque', 'sitio-cero'); ?></button>
 
-            <template data-accordion-template>
-                <div class="sitio-cero-dm-accordion__row" data-accordion-row>
-                    <div class="sitio-cero-dm-accordion__row-head">
-                        <button type="button" class="button-link sitio-cero-dm-accordion__drag" data-accordion-drag aria-label="<?php esc_attr_e('Mover', 'sitio-cero'); ?>">
-                            <span class="dashicons dashicons-move"></span>
-                        </button>
-                        <strong><?php esc_html_e('Item', 'sitio-cero'); ?></strong>
-                        <button type="button" class="button-link-delete" data-accordion-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+            <template data-dm-resource-block-template>
+                <div class="sitio-cero-dm-resource-block" data-dm-resource-block-row>
+                    <div class="sitio-cero-dm-resource-block__head">
+                        <strong><?php esc_html_e('Bloque', 'sitio-cero'); ?></strong>
+                        <button type="button" class="button-link-delete" data-dm-resource-block-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
                     </div>
+                    <div class="sitio-cero-dm-grid">
+                        <p>
+                            <label><strong><?php esc_html_e('Titulo del bloque', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_direccion_resource_block_title[]" value="" placeholder="<?php esc_attr_e('Ejemplo: Documentos tributarios', 'sitio-cero'); ?>">
+                        </p>
+                        <p>
+                            <label><strong><?php esc_html_e('Tipo de bloque', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_direccion_resource_block_type[]">
+                                <?php foreach ($resource_type_options as $type_key => $type_label) : ?>
+                                    <option value="<?php echo esc_attr($type_key); ?>"<?php selected('documentos', $type_key); ?>><?php echo esc_html($type_label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </p>
+                    </div>
+
                     <p>
-                        <label><strong><?php esc_html_e('Titulo del item', 'sitio-cero'); ?></strong></label>
-                        <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_titulo[]" value="" placeholder="<?php esc_attr_e('Ejemplo: Atencion ciudadana', 'sitio-cero'); ?>">
+                        <label><strong><?php esc_html_e('Texto / HTML / embebido del bloque (opcional)', 'sitio-cero'); ?></strong></label>
+                        <textarea id="sitio_cero_direccion_resource_block_html___KEY__" class="widefat" rows="5" name="sitio_cero_direccion_resource_block_html[]" placeholder="<?php esc_attr_e('Ejemplo: <p>Informacion del bloque...</p><iframe ...></iframe>', 'sitio-cero'); ?>"></textarea>
                     </p>
-                    <div class="sitio-cero-dm-grid sitio-cero-dm-grid--styles">
-                        <p>
-                            <label><strong><?php esc_html_e('Border del boton', 'sitio-cero'); ?></strong></label>
-                            <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_border[]" value="" placeholder="1px solid #c9d7ee">
-                        </p>
-                        <p>
-                            <label><strong><?php esc_html_e('Margin del boton', 'sitio-cero'); ?></strong></label>
-                            <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_margin[]" value="" placeholder="0 0 12px 0">
-                        </p>
-                        <p>
-                            <label><strong><?php esc_html_e('Padding del boton', 'sitio-cero'); ?></strong></label>
-                            <input type="text" class="widefat" name="sitio_cero_direccion_acordeon_padding[]" value="" placeholder="14px 18px">
+                    <div class="sitio-cero-dm-embed-picker">
+                        <label><strong><?php esc_html_e('Insertar acordeon embebido (opcional)', 'sitio-cero'); ?></strong></label>
+                        <div class="sitio-cero-dm-embed-picker__controls">
+                            <select class="widefat" data-embed-shortcode-select data-target="#sitio_cero_direccion_resource_block_html___KEY__"<?php disabled(empty($acordeon_embed_options)); ?>>
+                                <option value=""><?php esc_html_e('Selecciona un acordeon...', 'sitio-cero'); ?></option>
+                                <?php foreach ($acordeon_embed_options as $acordeon_option) : ?>
+                                    <option value="<?php echo esc_attr((string) $acordeon_option['id']); ?>"><?php echo esc_html($acordeon_option['title']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="button" class="button button-secondary" data-embed-shortcode-insert data-target="#sitio_cero_direccion_resource_block_html___KEY__"<?php disabled(empty($acordeon_embed_options)); ?>>
+                                <?php esc_html_e('Insertar acordeon', 'sitio-cero'); ?>
+                            </button>
+                        </div>
+                        <p class="description">
+                            <?php if (empty($acordeon_embed_options)) : ?>
+                                <?php esc_html_e('Aun no hay acordeones creados. Crea uno en Acordeones para poder insertarlo.', 'sitio-cero'); ?>
+                            <?php else : ?>
+                                <?php esc_html_e('Se insertara el shortcode del acordeon en este campo.', 'sitio-cero'); ?>
+                            <?php endif; ?>
                         </p>
                     </div>
 
-                    <div class="sitio-cero-dm-subtabs" data-subtabs-root>
-                        <div class="sitio-cero-dm-subtabs__head">
-                            <strong><?php esc_html_e('Subpestañas desplegables', 'sitio-cero'); ?></strong>
-                            <button type="button" class="button button-secondary" data-subtab-add><?php esc_html_e('Agregar subpestaña', 'sitio-cero'); ?></button>
+                    <p><strong><?php esc_html_e('Items del bloque (titulo + enlace + icono)', 'sitio-cero'); ?></strong></p>
+                    <div class="sitio-cero-aviso-files" data-target="#sitio_cero_direccion_resource_block_links___KEY__">
+                        <div class="sitio-cero-aviso-files__actions">
+                            <button type="button" class="button button-secondary sitio-cero-aviso-files__library">
+                                <?php esc_html_e('Seleccionar desde biblioteca', 'sitio-cero'); ?>
+                            </button>
+                            <button type="button" class="button button-secondary sitio-cero-aviso-files__add">
+                                <?php esc_html_e('Agregar item manual', 'sitio-cero'); ?>
+                            </button>
                         </div>
-                        <input type="hidden" name="sitio_cero_direccion_acordeon_subtabs[]" value="[]" data-subtabs-hidden>
-                        <div class="sitio-cero-dm-subtabs__list" data-subtabs-list></div>
-                        <template data-subtab-template>
-                            <div class="sitio-cero-dm-subtabs__row" data-subtab-row>
-                                <p>
-                                    <label><strong><?php esc_html_e('Titulo subpestaña', 'sitio-cero'); ?></strong></label>
-                                    <input type="text" class="widefat" value="" data-subtab-title placeholder="<?php esc_attr_e('Ejemplo: Funciones especificas', 'sitio-cero'); ?>">
-                                </p>
-                                <p>
-                                    <label><strong><?php esc_html_e('Contenido subpestaña', 'sitio-cero'); ?></strong></label>
-                                    <textarea class="widefat" rows="3" data-subtab-content placeholder="<?php esc_attr_e('Texto o HTML de esta subpestaña.', 'sitio-cero'); ?>"></textarea>
-                                </p>
-                                <button type="button" class="button-link-delete" data-subtab-remove><?php esc_html_e('Quitar subpestaña', 'sitio-cero'); ?></button>
+                        <div class="sitio-cero-aviso-files__list" data-file-list></div>
+                        <template class="sitio-cero-aviso-files__template">
+                            <div class="sitio-cero-aviso-files__row" data-file-row>
+                                <input type="text" class="widefat sitio-cero-aviso-files__input" data-key="label" placeholder="<?php esc_attr_e('Nombre', 'sitio-cero'); ?>" value="">
+                                <input type="url" class="widefat sitio-cero-aviso-files__input" data-key="url" placeholder="https://..." value="">
+                                <select class="sitio-cero-aviso-files__select" data-key="icon">
+                                    <?php foreach ($icon_options as $icon_key => $icon_label) : ?>
+                                        <option value="<?php echo esc_attr($icon_key); ?>"><?php echo esc_html($icon_label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="button-link-delete sitio-cero-aviso-files__remove"><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
                             </div>
                         </template>
                     </div>
+                    <textarea id="sitio_cero_direccion_resource_block_links___KEY__" name="sitio_cero_direccion_resource_block_links[]" class="widefat" rows="4" hidden></textarea>
                 </div>
             </template>
         </div>
@@ -1022,6 +1239,27 @@ function sitio_cero_render_direccion_municipal_metabox($post)
             <label for="sitio_cero_direccion_custom_html"><strong><?php esc_html_e('HTML libre (video, embebidos, estructura)', 'sitio-cero'); ?></strong></label>
             <textarea id="sitio_cero_direccion_custom_html" name="sitio_cero_direccion_custom_html" class="widefat" rows="7" placeholder="<?php esc_attr_e('Ejemplo: <h3>Atencion ciudadana</h3><p>Texto...</p><iframe ...></iframe>', 'sitio-cero'); ?>"><?php echo esc_textarea($custom_html); ?></textarea>
         </p>
+        <div class="sitio-cero-dm-embed-picker">
+            <label><strong><?php esc_html_e('Insertar acordeon embebido (opcional)', 'sitio-cero'); ?></strong></label>
+            <div class="sitio-cero-dm-embed-picker__controls">
+                <select class="widefat" data-embed-shortcode-select data-target="#sitio_cero_direccion_custom_html"<?php disabled(empty($acordeon_embed_options)); ?>>
+                    <option value=""><?php esc_html_e('Selecciona un acordeon...', 'sitio-cero'); ?></option>
+                    <?php foreach ($acordeon_embed_options as $acordeon_option) : ?>
+                        <option value="<?php echo esc_attr((string) $acordeon_option['id']); ?>"><?php echo esc_html($acordeon_option['title']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="button button-secondary" data-embed-shortcode-insert data-target="#sitio_cero_direccion_custom_html"<?php disabled(empty($acordeon_embed_options)); ?>>
+                    <?php esc_html_e('Insertar acordeon', 'sitio-cero'); ?>
+                </button>
+            </div>
+            <p class="description">
+                <?php if (empty($acordeon_embed_options)) : ?>
+                    <?php esc_html_e('Aun no hay acordeones creados. Crea uno en Acordeones para poder insertarlo.', 'sitio-cero'); ?>
+                <?php else : ?>
+                    <?php esc_html_e('Se insertara el shortcode del acordeon en este campo.', 'sitio-cero'); ?>
+                <?php endif; ?>
+            </p>
+        </div>
         <p>
             <label for="sitio_cero_direccion_custom_css"><strong><?php esc_html_e('CSS libre (opcional)', 'sitio-cero'); ?></strong></label>
             <textarea id="sitio_cero_direccion_custom_css" name="sitio_cero_direccion_custom_css" class="widefat" rows="6" placeholder="<?php esc_attr_e('Usa {{selector}} para apuntar este contenido.', 'sitio-cero'); ?>"><?php echo esc_textarea($custom_css); ?></textarea>
@@ -1107,55 +1345,135 @@ function sitio_cero_save_direccion_municipal_meta($post_id)
         delete_post_meta($post_id, 'sitio_cero_direccion_telefonos');
     }
 
-    $titles = isset($_POST['sitio_cero_direccion_acordeon_titulo']) && is_array($_POST['sitio_cero_direccion_acordeon_titulo'])
-        ? wp_unslash($_POST['sitio_cero_direccion_acordeon_titulo'])
+    $recursos_titulo = isset($_POST['sitio_cero_direccion_recursos_titulo'])
+        ? sanitize_text_field(wp_unslash($_POST['sitio_cero_direccion_recursos_titulo']))
+        : '';
+    if ('' !== $recursos_titulo) {
+        update_post_meta($post_id, 'sitio_cero_direccion_recursos_titulo', $recursos_titulo);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_direccion_recursos_titulo');
+    }
+
+    $resource_titles = isset($_POST['sitio_cero_direccion_resource_block_title']) && is_array($_POST['sitio_cero_direccion_resource_block_title'])
+        ? wp_unslash($_POST['sitio_cero_direccion_resource_block_title'])
         : array();
-    $borders = isset($_POST['sitio_cero_direccion_acordeon_border']) && is_array($_POST['sitio_cero_direccion_acordeon_border'])
-        ? wp_unslash($_POST['sitio_cero_direccion_acordeon_border'])
+    $resource_types = isset($_POST['sitio_cero_direccion_resource_block_type']) && is_array($_POST['sitio_cero_direccion_resource_block_type'])
+        ? wp_unslash($_POST['sitio_cero_direccion_resource_block_type'])
         : array();
-    $margins = isset($_POST['sitio_cero_direccion_acordeon_margin']) && is_array($_POST['sitio_cero_direccion_acordeon_margin'])
-        ? wp_unslash($_POST['sitio_cero_direccion_acordeon_margin'])
+    $resource_htmls = isset($_POST['sitio_cero_direccion_resource_block_html']) && is_array($_POST['sitio_cero_direccion_resource_block_html'])
+        ? wp_unslash($_POST['sitio_cero_direccion_resource_block_html'])
         : array();
-    $paddings = isset($_POST['sitio_cero_direccion_acordeon_padding']) && is_array($_POST['sitio_cero_direccion_acordeon_padding'])
-        ? wp_unslash($_POST['sitio_cero_direccion_acordeon_padding'])
-        : array();
-    $subtabs_raw = isset($_POST['sitio_cero_direccion_acordeon_subtabs']) && is_array($_POST['sitio_cero_direccion_acordeon_subtabs'])
-        ? wp_unslash($_POST['sitio_cero_direccion_acordeon_subtabs'])
+    $resource_links = isset($_POST['sitio_cero_direccion_resource_block_links']) && is_array($_POST['sitio_cero_direccion_resource_block_links'])
+        ? wp_unslash($_POST['sitio_cero_direccion_resource_block_links'])
         : array();
 
-    $total = max(count($titles), count($borders), count($margins), count($paddings), count($subtabs_raw));
-    $accordion_items = array();
+    $resource_total = max(count($resource_titles), count($resource_types), count($resource_htmls), count($resource_links));
+    $resource_blocks = array();
 
-    for ($index = 0; $index < $total; $index++) {
-        $title = isset($titles[$index]) ? sanitize_text_field((string) $titles[$index]) : '';
-        $border = isset($borders[$index]) ? sitio_cero_sanitize_css_shorthand((string) $borders[$index], 80) : '';
-        $margin = isset($margins[$index]) ? sitio_cero_sanitize_css_shorthand((string) $margins[$index], 60) : '';
-        $padding = isset($paddings[$index]) ? sitio_cero_sanitize_css_shorthand((string) $paddings[$index], 60) : '';
-        $subtabs = isset($subtabs_raw[$index]) ? sitio_cero_sanitize_direccion_subtabs((string) $subtabs_raw[$index]) : array();
+    for ($index = 0; $index < $resource_total; $index++) {
+        $block_title = isset($resource_titles[$index]) ? sanitize_text_field((string) $resource_titles[$index]) : '';
+        $block_type = isset($resource_types[$index]) ? sanitize_key((string) $resource_types[$index]) : 'documentos';
+        if (!in_array($block_type, array('documentos', 'archivos'), true)) {
+            $block_type = 'documentos';
+        }
+        $block_html = isset($resource_htmls[$index]) ? sitio_cero_sanitize_direccion_html((string) $resource_htmls[$index]) : '';
+        $block_links = isset($resource_links[$index]) ? sitio_cero_sanitize_aviso_links_textarea((string) $resource_links[$index]) : '';
 
-        if ('' === $title) {
+        if (
+            '' === $block_title
+            && '' === trim((string) wp_strip_all_tags($block_html))
+            && '' === trim($block_links)
+        ) {
             continue;
         }
 
-        $accordion_item = array(
-            'title'   => $title,
-            'border'  => $border,
-            'margin'  => $margin,
-            'padding' => $padding,
+        $resource_blocks[] = array(
+            'title' => $block_title,
+            'type'  => $block_type,
+            'html'  => $block_html,
+            'links' => $block_links,
         );
+    }
 
-        if (!empty($subtabs)) {
-            $accordion_item['subtabs'] = $subtabs;
+    if (!empty($resource_blocks)) {
+        update_post_meta($post_id, 'sitio_cero_direccion_resource_blocks', $resource_blocks);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_direccion_resource_blocks');
+    }
+
+    $first_documentos = null;
+    $first_archivos = null;
+    foreach ($resource_blocks as $block) {
+        if (!is_array($block)) {
+            continue;
+        }
+        $current_type = isset($block['type']) ? sanitize_key((string) $block['type']) : 'documentos';
+        if ('documentos' === $current_type && null === $first_documentos) {
+            $first_documentos = $block;
+        }
+        if ('archivos' === $current_type && null === $first_archivos) {
+            $first_archivos = $block;
+        }
+    }
+
+    if (is_array($first_documentos)) {
+        $legacy_title = isset($first_documentos['title']) ? sanitize_text_field((string) $first_documentos['title']) : '';
+        $legacy_html = isset($first_documentos['html']) ? sitio_cero_sanitize_direccion_html((string) $first_documentos['html']) : '';
+        $legacy_links = isset($first_documentos['links']) ? sitio_cero_sanitize_aviso_links_textarea((string) $first_documentos['links']) : '';
+
+        if ('' !== $legacy_title) {
+            update_post_meta($post_id, 'sitio_cero_direccion_documentos_titulo', $legacy_title);
+        } else {
+            delete_post_meta($post_id, 'sitio_cero_direccion_documentos_titulo');
         }
 
-        $accordion_items[] = $accordion_item;
+        if ('' !== $legacy_html) {
+            update_post_meta($post_id, 'sitio_cero_direccion_documentos_html', $legacy_html);
+        } else {
+            delete_post_meta($post_id, 'sitio_cero_direccion_documentos_html');
+        }
+
+        if ('' !== $legacy_links) {
+            update_post_meta($post_id, 'sitio_cero_direccion_documentos', $legacy_links);
+        } else {
+            delete_post_meta($post_id, 'sitio_cero_direccion_documentos');
+        }
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_direccion_documentos_titulo');
+        delete_post_meta($post_id, 'sitio_cero_direccion_documentos_html');
+        delete_post_meta($post_id, 'sitio_cero_direccion_documentos');
     }
 
-    if (!empty($accordion_items)) {
-        update_post_meta($post_id, 'sitio_cero_direccion_acordeon_items', $accordion_items);
+    if (is_array($first_archivos)) {
+        $legacy_title = isset($first_archivos['title']) ? sanitize_text_field((string) $first_archivos['title']) : '';
+        $legacy_html = isset($first_archivos['html']) ? sitio_cero_sanitize_direccion_html((string) $first_archivos['html']) : '';
+        $legacy_links = isset($first_archivos['links']) ? sitio_cero_sanitize_aviso_links_textarea((string) $first_archivos['links']) : '';
+
+        if ('' !== $legacy_title) {
+            update_post_meta($post_id, 'sitio_cero_direccion_archivos_titulo', $legacy_title);
+        } else {
+            delete_post_meta($post_id, 'sitio_cero_direccion_archivos_titulo');
+        }
+
+        if ('' !== $legacy_html) {
+            update_post_meta($post_id, 'sitio_cero_direccion_archivos_html', $legacy_html);
+        } else {
+            delete_post_meta($post_id, 'sitio_cero_direccion_archivos_html');
+        }
+
+        if ('' !== $legacy_links) {
+            update_post_meta($post_id, 'sitio_cero_direccion_archivos', $legacy_links);
+        } else {
+            delete_post_meta($post_id, 'sitio_cero_direccion_archivos');
+        }
     } else {
-        delete_post_meta($post_id, 'sitio_cero_direccion_acordeon_items');
+        delete_post_meta($post_id, 'sitio_cero_direccion_archivos_titulo');
+        delete_post_meta($post_id, 'sitio_cero_direccion_archivos_html');
+        delete_post_meta($post_id, 'sitio_cero_direccion_archivos');
     }
+
+    // Remove legacy accordion meta when saving with the new documents/files model.
+    delete_post_meta($post_id, 'sitio_cero_direccion_acordeon_items');
 
     $custom_html = '';
     if (isset($_POST['sitio_cero_direccion_custom_html'])) {
@@ -1201,20 +1519,23 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             'telefonos'  => array('+56 41 220 3101', '+56 41 220 3102'),
             'email'      => 'dideco@municipio.cl',
             'direccion'  => 'Orompello 570, Concepcion',
-            'accordion'  => array(
+            'recursos_titulo'   => 'Documentos y archivos de apoyo',
+            'documentos_titulo' => 'Documentos oficiales',
+            'documentos_html'   => '<p>En este bloque puedes publicar documentos normativos y formularios principales.</p>',
+            'archivos_titulo'   => 'Archivos complementarios',
+            'archivos_html'     => '<p>Aqui puedes agregar anexos, material de apoyo y recursos embebidos.</p>',
+            'documentos' => array(
                 array(
-                    'title'   => 'Programas y servicios',
-                    'content' => '<ul><li>Subsidios y beneficios sociales</li><li>Apoyo a organizaciones comunitarias</li><li>Orientacion social integral</li></ul>',
-                    'border'  => '1px solid #c9d7ee',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Guia de programas sociales',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'pdf',
                 ),
+            ),
+            'archivos'   => array(
                 array(
-                    'title'   => 'Atencion y horarios',
-                    'content' => '<p>Atencion presencial de lunes a viernes de 08:30 a 14:00 hrs. Derivaciones especializadas en ventanilla unica.</p>',
-                    'border'  => '1px solid #c9d7ee',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Ficha de contacto DIDECO',
+                    'url'   => 'https://concepcion.cl/contacto/',
+                    'icon'  => 'doc',
                 ),
             ),
             'custom_html' => '<h3>Canales digitales</h3><p>Tambien puedes gestionar solicitudes por formulario web y mesa de ayuda municipal.</p>',
@@ -1228,20 +1549,18 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             'telefonos'  => array('+56 41 220 4201'),
             'email'      => 'dom@municipio.cl',
             'direccion'  => 'Caupolican 385, Concepcion',
-            'accordion'  => array(
+            'documentos' => array(
                 array(
-                    'title'   => 'Permisos',
-                    'content' => '<p>Ingreso y revision de permisos de edificacion, ampliacion, demolicion y regularizaciones.</p>',
-                    'border'  => '1px solid #bfd2f2',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Requisitos permisos DOM',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'pdf',
                 ),
+            ),
+            'archivos'   => array(
                 array(
-                    'title'   => 'Documentos requeridos',
-                    'content' => '<p>Presenta planos, certificados y antecedentes segun normativa vigente.</p>',
-                    'border'  => '1px solid #bfd2f2',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Formulario solicitud DOM',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'doc',
                 ),
             ),
             'custom_html' => '<div class="dm-note"><strong>Nota:</strong> Revisa requisitos actualizados antes de ingresar tu solicitud.</div>',
@@ -1255,20 +1574,18 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             'telefonos'  => array('+56 41 220 5100', '+56 41 220 5103'),
             'email'      => 'transito@municipio.cl',
             'direccion'  => 'Anibal Pinto 210, Concepcion',
-            'accordion'  => array(
+            'documentos' => array(
                 array(
-                    'title'   => 'Licencias de conducir',
-                    'content' => '<p>Renovacion, duplicados y primera licencia segun agenda disponible.</p>',
-                    'border'  => '1px solid #c9d7ee',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Checklist licencia de conducir',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'pdf',
                 ),
+            ),
+            'archivos'   => array(
                 array(
-                    'title'   => 'Educacion vial',
-                    'content' => '<p>Programas de prevencion y capacitacion con enfoque comunitario y escolar.</p>',
-                    'border'  => '1px solid #c9d7ee',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Formulario renovacion licencia',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'doc',
                 ),
             ),
             'custom_html' => '<p><a href="#">Ver calendario de atencion</a></p>',
@@ -1282,20 +1599,18 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             'telefonos'  => array('+56 41 220 6201'),
             'email'      => 'medioambiente@municipio.cl',
             'direccion'  => 'Freire 880, Concepcion',
-            'accordion'  => array(
+            'documentos' => array(
                 array(
-                    'title'   => 'Reciclaje y puntos limpios',
-                    'content' => '<p>Informacion de puntos limpios, retiro especial y campañas de reciclaje en terreno.</p>',
-                    'border'  => '1px solid #cfe8d6',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Calendario reciclaje comunal',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'pdf',
                 ),
+            ),
+            'archivos'   => array(
                 array(
-                    'title'   => 'Educacion ambiental',
-                    'content' => '<p>Talleres y actividades para comunidades educativas y juntas de vecinos.</p>',
-                    'border'  => '1px solid #cfe8d6',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Material educativo ambiental',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'img',
                 ),
             ),
             'custom_html' => '<p>Integra material audiovisual y recursos descargables para actividades comunitarias.</p>',
@@ -1309,20 +1624,18 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             'telefonos'  => array('+56 41 220 7300'),
             'email'      => 'seguridadpublica@municipio.cl',
             'direccion'  => 'Barros Arana 1200, Concepcion',
-            'accordion'  => array(
+            'documentos' => array(
                 array(
-                    'title'   => 'Canales de denuncia',
-                    'content' => '<p>Orientacion sobre canales preventivos y coordinacion con equipos territoriales.</p>',
-                    'border'  => '1px solid #d9d8f2',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Protocolo seguridad barrial',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'pdf',
                 ),
+            ),
+            'archivos'   => array(
                 array(
-                    'title'   => 'Plan barrial',
-                    'content' => '<p>Mesas de trabajo y seguimiento de compromisos por cuadrantes.</p>',
-                    'border'  => '1px solid #d9d8f2',
-                    'margin'  => '0 0 12px 0',
-                    'padding' => '14px 18px',
+                    'label' => 'Formato reporte vecinal',
+                    'url'   => 'https://concepcion.cl/',
+                    'icon'  => 'xls',
                 ),
             ),
             'custom_html' => '<iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Video informativo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>',
@@ -1337,7 +1650,7 @@ function sitio_cero_seed_default_direcciones_municipales()
         return;
     }
 
-    $seed_version = '1';
+    $seed_version = '3';
     $already_seeded_version = (string) get_option('sitio_cero_default_direcciones_seeded_version', '');
     if ($seed_version === $already_seeded_version) {
         return;
@@ -1417,41 +1730,91 @@ function sitio_cero_seed_default_direcciones_municipales()
         if (isset($item['direccion']) && is_string($item['direccion'])) {
             update_post_meta($post_id, 'sitio_cero_direccion_direccion', sanitize_text_field($item['direccion']));
         }
-        if (isset($item['accordion']) && is_array($item['accordion']) && !empty($item['accordion'])) {
-            $accordion_items = array();
-            foreach ($item['accordion'] as $accordion_item) {
-                if (!is_array($accordion_item)) {
-                    continue;
-                }
 
-                $accordion_items[] = array(
-                    'title'   => isset($accordion_item['title']) ? sanitize_text_field((string) $accordion_item['title']) : '',
-                    'border'  => isset($accordion_item['border']) ? sitio_cero_sanitize_css_shorthand((string) $accordion_item['border'], 80) : '',
-                    'margin'  => isset($accordion_item['margin']) ? sitio_cero_sanitize_css_shorthand((string) $accordion_item['margin'], 60) : '',
-                    'padding' => isset($accordion_item['padding']) ? sitio_cero_sanitize_css_shorthand((string) $accordion_item['padding'], 60) : '',
-                );
+        $recursos_titulo = isset($item['recursos_titulo']) && is_string($item['recursos_titulo'])
+            ? sanitize_text_field($item['recursos_titulo'])
+            : __('Documentos y archivos', 'sitio-cero');
+        if ('' !== $recursos_titulo) {
+            update_post_meta($post_id, 'sitio_cero_direccion_recursos_titulo', $recursos_titulo);
+        }
 
-                $subtabs = array();
-                if (isset($accordion_item['subtabs'])) {
-                    $subtabs = sitio_cero_sanitize_direccion_subtabs($accordion_item['subtabs']);
-                } elseif (isset($accordion_item['content']) && '' !== trim(wp_strip_all_tags((string) $accordion_item['content']))) {
-                    $subtabs = array(
-                        array(
-                            'title'   => __('Detalle', 'sitio-cero'),
-                            'content' => sitio_cero_sanitize_direccion_html((string) $accordion_item['content']),
-                        ),
-                    );
-                }
+        $documentos_titulo = isset($item['documentos_titulo']) && is_string($item['documentos_titulo'])
+            ? sanitize_text_field($item['documentos_titulo'])
+            : __('Documentos', 'sitio-cero');
+        if ('' !== $documentos_titulo) {
+            update_post_meta($post_id, 'sitio_cero_direccion_documentos_titulo', $documentos_titulo);
+        }
 
-                if (!empty($subtabs)) {
-                    $accordion_items[count($accordion_items) - 1]['subtabs'] = $subtabs;
-                }
-            }
+        $archivos_titulo = isset($item['archivos_titulo']) && is_string($item['archivos_titulo'])
+            ? sanitize_text_field($item['archivos_titulo'])
+            : __('Archivos', 'sitio-cero');
+        if ('' !== $archivos_titulo) {
+            update_post_meta($post_id, 'sitio_cero_direccion_archivos_titulo', $archivos_titulo);
+        }
 
-            if (!empty($accordion_items)) {
-                update_post_meta($post_id, 'sitio_cero_direccion_acordeon_items', $accordion_items);
+        if (isset($item['documentos_html']) && is_string($item['documentos_html'])) {
+            $documentos_html = sitio_cero_sanitize_direccion_html($item['documentos_html']);
+            if ('' !== $documentos_html) {
+                update_post_meta($post_id, 'sitio_cero_direccion_documentos_html', $documentos_html);
             }
         }
+
+        if (isset($item['archivos_html']) && is_string($item['archivos_html'])) {
+            $archivos_html = sitio_cero_sanitize_direccion_html($item['archivos_html']);
+            if ('' !== $archivos_html) {
+                update_post_meta($post_id, 'sitio_cero_direccion_archivos_html', $archivos_html);
+            }
+        }
+
+        if (isset($item['documentos']) && is_array($item['documentos']) && !empty($item['documentos'])) {
+            $documentos_lines = array();
+            foreach ($item['documentos'] as $doc_item) {
+                if (!is_array($doc_item)) {
+                    continue;
+                }
+                $label = isset($doc_item['label']) ? sanitize_text_field((string) $doc_item['label']) : '';
+                $url = isset($doc_item['url']) ? esc_url_raw((string) $doc_item['url']) : '';
+                $icon = isset($doc_item['icon']) ? sitio_cero_sanitize_aviso_file_icon((string) $doc_item['icon']) : '';
+                if ('' === $url) {
+                    continue;
+                }
+                $line = '' !== $label ? ($label . '|' . $url) : $url;
+                if ('' !== $icon) {
+                    $line .= '|' . $icon;
+                }
+                $documentos_lines[] = $line;
+            }
+            $documentos_value = sitio_cero_sanitize_aviso_links_textarea(implode("\n", $documentos_lines));
+            if ('' !== $documentos_value) {
+                update_post_meta($post_id, 'sitio_cero_direccion_documentos', $documentos_value);
+            }
+        }
+
+        if (isset($item['archivos']) && is_array($item['archivos']) && !empty($item['archivos'])) {
+            $archivos_lines = array();
+            foreach ($item['archivos'] as $file_item) {
+                if (!is_array($file_item)) {
+                    continue;
+                }
+                $label = isset($file_item['label']) ? sanitize_text_field((string) $file_item['label']) : '';
+                $url = isset($file_item['url']) ? esc_url_raw((string) $file_item['url']) : '';
+                $icon = isset($file_item['icon']) ? sitio_cero_sanitize_aviso_file_icon((string) $file_item['icon']) : '';
+                if ('' === $url) {
+                    continue;
+                }
+                $line = '' !== $label ? ($label . '|' . $url) : $url;
+                if ('' !== $icon) {
+                    $line .= '|' . $icon;
+                }
+                $archivos_lines[] = $line;
+            }
+            $archivos_value = sitio_cero_sanitize_aviso_links_textarea(implode("\n", $archivos_lines));
+            if ('' !== $archivos_value) {
+                update_post_meta($post_id, 'sitio_cero_direccion_archivos', $archivos_value);
+            }
+        }
+
+        delete_post_meta($post_id, 'sitio_cero_direccion_acordeon_items');
         if (isset($item['custom_html']) && is_string($item['custom_html'])) {
             $clean_html = sitio_cero_sanitize_direccion_html($item['custom_html']);
             if ('' !== $clean_html) {
@@ -3855,3 +4218,371 @@ function sitio_cero_show_clone_lamina_notice()
     echo '</p></div>';
 }
 add_action('admin_notices', 'sitio_cero_show_clone_lamina_notice');
+
+function sitio_cero_register_acordeon_embed_post_type()
+{
+    $labels = array(
+        'name'               => __('Acordeones', 'sitio-cero'),
+        'singular_name'      => __('Acordeon', 'sitio-cero'),
+        'menu_name'          => __('Acordeones', 'sitio-cero'),
+        'name_admin_bar'     => __('Acordeon', 'sitio-cero'),
+        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
+        'add_new_item'       => __('Agregar acordeon', 'sitio-cero'),
+        'new_item'           => __('Nuevo acordeon', 'sitio-cero'),
+        'edit_item'          => __('Editar acordeon', 'sitio-cero'),
+        'view_item'          => __('Ver acordeon', 'sitio-cero'),
+        'all_items'          => __('Todos los acordeones', 'sitio-cero'),
+        'search_items'       => __('Buscar acordeones', 'sitio-cero'),
+        'not_found'          => __('No se encontraron acordeones.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay acordeones en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'acordeon_embed',
+        array(
+            'labels'             => $labels,
+            'public'             => false,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'show_in_admin_bar'  => true,
+            'show_in_rest'       => true,
+            'publicly_queryable' => false,
+            'exclude_from_search'=> true,
+            'has_archive'        => false,
+            'menu_position'      => 24,
+            'menu_icon'          => 'dashicons-editor-ol',
+            'supports'           => array('title', 'revisions'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_acordeon_embed_post_type');
+
+function sitio_cero_enqueue_acordeon_embed_admin_assets($hook_suffix)
+{
+    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || 'acordeon_embed' !== $screen->post_type) {
+        return;
+    }
+
+    $version = wp_get_theme()->get('Version');
+
+    wp_enqueue_style(
+        'sitio-cero-admin-acordeon-embed',
+        get_template_directory_uri() . '/assets/css/admin-acordeon-embed.css',
+        array(),
+        $version
+    );
+
+    wp_enqueue_script(
+        'sitio-cero-admin-acordeon-embed',
+        get_template_directory_uri() . '/assets/js/admin-acordeon-embed.js',
+        array('jquery'),
+        $version,
+        true
+    );
+}
+add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_acordeon_embed_admin_assets');
+
+function sitio_cero_get_acordeon_embed_items($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return array();
+    }
+
+    $raw_items = get_post_meta($post_id, 'sitio_cero_acordeon_embed_items', true);
+    if (!is_array($raw_items)) {
+        return array();
+    }
+
+    $items = array();
+    foreach ($raw_items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+        $content = isset($item['content']) ? wp_kses_post((string) $item['content']) : '';
+        if ('' === $title && '' === trim((string) wp_strip_all_tags($content))) {
+            continue;
+        }
+
+        $items[] = array(
+            'title'   => $title,
+            'content' => $content,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_add_acordeon_embed_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_acordeon_embed_items',
+        __('Items del acordeon', 'sitio-cero'),
+        'sitio_cero_render_acordeon_embed_metabox',
+        'acordeon_embed',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_acordeon_embed_metaboxes');
+
+function sitio_cero_render_acordeon_embed_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_acordeon_embed_meta', 'sitio_cero_acordeon_embed_meta_nonce');
+
+    $items = sitio_cero_get_acordeon_embed_items($post->ID);
+    if (empty($items)) {
+        $items = array(
+            array(
+                'title'   => __('Informacion general', 'sitio-cero'),
+                'content' => '<p>' . __('Aqui puedes agregar informacion para este item del acordeon.', 'sitio-cero') . '</p>',
+            ),
+        );
+    }
+    ?>
+    <div class="sitio-cero-acordeon-embed-admin" data-acordeon-admin-root>
+        <p class="description">
+            <?php esc_html_e('Inserta este acordeon donde quieras usando el shortcode:', 'sitio-cero'); ?>
+            <code>[acordeon id="<?php echo esc_html((string) $post->ID); ?>"]</code>
+        </p>
+
+        <div class="sitio-cero-acordeon-embed-admin__list" data-acordeon-admin-list>
+            <?php foreach ($items as $index => $item) : ?>
+                <?php
+                $item_title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+                $item_content = isset($item['content']) ? (string) $item['content'] : '';
+                ?>
+                <div class="sitio-cero-acordeon-embed-admin__row" data-acordeon-admin-row>
+                    <div class="sitio-cero-acordeon-embed-admin__row-head">
+                        <strong><?php echo esc_html(sprintf(__('Item %d', 'sitio-cero'), $index + 1)); ?></strong>
+                        <button type="button" class="button-link-delete" data-acordeon-admin-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                    <p>
+                        <label><strong><?php esc_html_e('Titulo', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_acordeon_embed_item_title[]" value="<?php echo esc_attr($item_title); ?>" placeholder="<?php esc_attr_e('Ejemplo: Requisitos', 'sitio-cero'); ?>">
+                    </p>
+                    <p>
+                        <label><strong><?php esc_html_e('Contenido (HTML permitido)', 'sitio-cero'); ?></strong></label>
+                        <textarea class="widefat" rows="5" name="sitio_cero_acordeon_embed_item_content[]" placeholder="<?php esc_attr_e('Texto del item...', 'sitio-cero'); ?>"><?php echo esc_textarea($item_content); ?></textarea>
+                    </p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <button type="button" class="button button-primary" data-acordeon-admin-add><?php esc_html_e('Agregar item', 'sitio-cero'); ?></button>
+
+        <template data-acordeon-admin-template>
+            <div class="sitio-cero-acordeon-embed-admin__row" data-acordeon-admin-row>
+                <div class="sitio-cero-acordeon-embed-admin__row-head">
+                    <strong><?php esc_html_e('Item', 'sitio-cero'); ?></strong>
+                    <button type="button" class="button-link-delete" data-acordeon-admin-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+                <p>
+                    <label><strong><?php esc_html_e('Titulo', 'sitio-cero'); ?></strong></label>
+                    <input type="text" class="widefat" name="sitio_cero_acordeon_embed_item_title[]" value="" placeholder="<?php esc_attr_e('Ejemplo: Requisitos', 'sitio-cero'); ?>">
+                </p>
+                <p>
+                    <label><strong><?php esc_html_e('Contenido (HTML permitido)', 'sitio-cero'); ?></strong></label>
+                    <textarea class="widefat" rows="5" name="sitio_cero_acordeon_embed_item_content[]" placeholder="<?php esc_attr_e('Texto del item...', 'sitio-cero'); ?>"></textarea>
+                </p>
+            </div>
+        </template>
+    </div>
+    <?php
+}
+
+function sitio_cero_save_acordeon_embed_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_acordeon_embed_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_acordeon_embed_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_acordeon_embed_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $titles = isset($_POST['sitio_cero_acordeon_embed_item_title']) && is_array($_POST['sitio_cero_acordeon_embed_item_title'])
+        ? wp_unslash($_POST['sitio_cero_acordeon_embed_item_title'])
+        : array();
+    $contents = isset($_POST['sitio_cero_acordeon_embed_item_content']) && is_array($_POST['sitio_cero_acordeon_embed_item_content'])
+        ? wp_unslash($_POST['sitio_cero_acordeon_embed_item_content'])
+        : array();
+
+    $total = max(count($titles), count($contents));
+    $items = array();
+
+    for ($index = 0; $index < $total; $index++) {
+        $title = isset($titles[$index]) ? sanitize_text_field((string) $titles[$index]) : '';
+        $content = isset($contents[$index]) ? wp_kses_post((string) $contents[$index]) : '';
+
+        if ('' === $title && '' === trim((string) wp_strip_all_tags($content))) {
+            continue;
+        }
+
+        $items[] = array(
+            'title'   => $title,
+            'content' => $content,
+        );
+    }
+
+    if (!empty($items)) {
+        update_post_meta($post_id, 'sitio_cero_acordeon_embed_items', $items);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_acordeon_embed_items');
+    }
+}
+add_action('save_post_acordeon_embed', 'sitio_cero_save_acordeon_embed_meta');
+
+function sitio_cero_shortcode_acordeon($atts = array())
+{
+    $atts = shortcode_atts(
+        array(
+            'id' => 0,
+        ),
+        $atts,
+        'acordeon'
+    );
+
+    $post_id = absint($atts['id']);
+    if ($post_id <= 0) {
+        return '';
+    }
+
+    $post = get_post($post_id);
+    if (!$post instanceof WP_Post || 'acordeon_embed' !== $post->post_type) {
+        return '';
+    }
+
+    if ('publish' !== get_post_status($post_id) && !current_user_can('read_post', $post_id)) {
+        return '';
+    }
+
+    $items = sitio_cero_get_acordeon_embed_items($post_id);
+    if (empty($items)) {
+        return '';
+    }
+
+    $uid = wp_unique_id('sc-accordion-');
+
+    ob_start();
+    ?>
+    <div class="sc-accordion-container" data-sc-accordion id="<?php echo esc_attr($uid); ?>">
+        <?php foreach ($items as $index => $item) : ?>
+            <?php
+            $item_title = isset($item['title']) ? (string) $item['title'] : '';
+            $item_content = isset($item['content']) ? (string) $item['content'] : '';
+            $content_id = $uid . '-content-' . $index;
+            ?>
+            <div class="sc-accordion-item">
+                <button class="sc-accordion-header" type="button" aria-expanded="false" aria-controls="<?php echo esc_attr($content_id); ?>">
+                    <span><?php echo esc_html($item_title); ?></span>
+                    <span class="sc-accordion-icon" aria-hidden="true">+</span>
+                </button>
+                <div class="sc-accordion-content" id="<?php echo esc_attr($content_id); ?>" hidden>
+                    <div class="sc-accordion-body">
+                        <?php echo wpautop(wp_kses_post($item_content)); ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php
+
+    return (string) ob_get_clean();
+}
+add_shortcode('acordeon', 'sitio_cero_shortcode_acordeon');
+
+function sitio_cero_get_default_acordeon_embed_items()
+{
+    return array(
+        array('title' => __('Informacion general', 'sitio-cero'), 'content' => '<p>Resumen inicial del servicio y su alcance para la comunidad.</p>'),
+        array('title' => __('Requisitos', 'sitio-cero'), 'content' => '<ul><li>Documento de identidad vigente</li><li>Comprobante de domicilio</li><li>Formulario completo</li></ul>'),
+        array('title' => __('Documentos necesarios', 'sitio-cero'), 'content' => '<p>Adjunta archivos en formato PDF, DOC o imagen cuando corresponda.</p>'),
+        array('title' => __('Horarios de atencion', 'sitio-cero'), 'content' => '<p>Lunes a viernes de 08:30 a 14:00 hrs.</p>'),
+        array('title' => __('Canales de atencion', 'sitio-cero'), 'content' => '<p>Presencial, telefono y formulario web municipal.</p>'),
+        array('title' => __('Plazos estimados', 'sitio-cero'), 'content' => '<p>El tiempo de respuesta puede variar entre 5 y 15 dias habiles.</p>'),
+        array('title' => __('Costos y pagos', 'sitio-cero'), 'content' => '<p>Indica aqui si el tramite es gratuito o si requiere pago de derechos.</p>'),
+        array('title' => __('Preguntas frecuentes', 'sitio-cero'), 'content' => '<p>Incluye respuestas breves a dudas recurrentes de los vecinos.</p>'),
+        array('title' => __('Normativa aplicable', 'sitio-cero'), 'content' => '<p>Referencia leyes, ordenanzas o reglamentos que respaldan el proceso.</p>'),
+        array('title' => __('Contacto', 'sitio-cero'), 'content' => '<p>Email: contacto@municipio.cl<br>Telefono: +56 41 220 0000</p>'),
+    );
+}
+
+function sitio_cero_seed_default_acordeon_embed()
+{
+    if (!post_type_exists('acordeon_embed')) {
+        return;
+    }
+
+    $seed_version = '1';
+    $already_seeded_version = (string) get_option('sitio_cero_default_acordeon_embed_seeded_version', '');
+    if ($seed_version === $already_seeded_version) {
+        return;
+    }
+
+    $title = __('Acordeon de ejemplo (10 items)', 'sitio-cero');
+    $slug = sanitize_title($title);
+
+    $existing = get_posts(
+        array(
+            'post_type'      => 'acordeon_embed',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'name'           => $slug,
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!empty($existing)) {
+        $post_id = (int) $existing[0];
+        wp_update_post(
+            array(
+                'ID'          => $post_id,
+                'post_title'  => $title,
+                'post_status' => 'publish',
+            )
+        );
+    } else {
+        $post_id = wp_insert_post(
+            array(
+                'post_type'   => 'acordeon_embed',
+                'post_status' => 'publish',
+                'post_title'  => $title,
+                'post_name'   => $slug,
+            ),
+            true
+        );
+    }
+
+    if (is_wp_error($post_id) || !$post_id) {
+        return;
+    }
+
+    $items = sitio_cero_get_default_acordeon_embed_items();
+    update_post_meta((int) $post_id, 'sitio_cero_acordeon_embed_items', $items);
+    update_post_meta((int) $post_id, '_sitio_cero_demo_acordeon_embed', '1');
+
+    update_option('sitio_cero_default_acordeon_embed_seeded_version', $seed_version);
+}
+add_action('init', 'sitio_cero_seed_default_acordeon_embed', 56);
