@@ -221,7 +221,10 @@ img {
 
 .site-nav__list a:hover,
 .site-nav__list a:focus-visible,
-.site-nav__list .current-menu-item > a {
+.site-nav__list .is-active > a,
+.site-nav__list a.is-active,
+.site-nav:not(.has-scrollspy) .site-nav__list .current-menu-item > a,
+.site-nav:not(.has-scrollspy) .site-nav__list .current_page_item > a {
     color: var(--color-navy);
     background: rgba(23, 89, 158, 0.11);
 }

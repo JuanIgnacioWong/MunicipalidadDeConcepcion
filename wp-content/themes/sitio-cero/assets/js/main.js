@@ -1,23 +1,30 @@
 (() => {
     const initNavigation = () => {
-        const navToggle = document.querySelector('.nav-toggle');
         const nav = document.querySelector('.site-nav');
+        const navToggle = document.querySelector('.nav-toggle');
 
-        if (!navToggle || !nav) {
+        if (!nav) {
             return;
         }
 
+        const navLinks = Array.from(nav.querySelectorAll('.site-nav__list a[href]'));
+
         const closeMenu = () => {
+            if (!navToggle) {
+                return;
+            }
             nav.classList.remove('is-open');
             navToggle.setAttribute('aria-expanded', 'false');
         };
 
-        navToggle.addEventListener('click', () => {
-            const isOpen = nav.classList.toggle('is-open');
-            navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        });
+        if (navToggle) {
+            navToggle.addEventListener('click', () => {
+                const isOpen = nav.classList.toggle('is-open');
+                navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
 
-        nav.querySelectorAll('a').forEach((link) => {
+        navLinks.forEach((link) => {
             link.addEventListener('click', closeMenu);
         });
 
@@ -26,6 +33,158 @@
                 closeMenu();
             }
         });
+
+        const normalizePath = (path) => {
+            const cleanPath = String(path || '').replace(/\/+$/, '');
+            return cleanPath === '' ? '/' : cleanPath;
+        };
+
+        const decodeHashId = (hash) => {
+            const raw = String(hash || '').replace(/^#/, '').trim();
+            if (raw === '') {
+                return '';
+            }
+
+            try {
+                return decodeURIComponent(raw);
+            } catch (_error) {
+                return raw;
+            }
+        };
+
+        const currentUrl = new URL(window.location.href);
+        const currentOrigin = currentUrl.origin;
+        const currentPath = normalizePath(currentUrl.pathname);
+        const currentSearch = String(currentUrl.search || '');
+
+        const sectionEntries = [];
+
+        navLinks.forEach((link) => {
+            const href = String(link.getAttribute('href') || '').trim();
+            if (href === '') {
+                return;
+            }
+
+            let parsedUrl = null;
+            try {
+                parsedUrl = new URL(href, currentOrigin);
+            } catch (_error) {
+                return;
+            }
+
+            if (parsedUrl.origin !== currentOrigin) {
+                return;
+            }
+
+            const targetPath = normalizePath(parsedUrl.pathname);
+            const targetSearch = String(parsedUrl.search || '');
+            const isSameDocument = targetPath === currentPath && targetSearch === currentSearch;
+
+            if (!isSameDocument) {
+                return;
+            }
+
+            const hashId = decodeHashId(parsedUrl.hash);
+            const menuItem = link.closest('li');
+
+            if (hashId === '') {
+                return;
+            }
+
+            const section = document.getElementById(hashId);
+            if (!section) {
+                return;
+            }
+
+            sectionEntries.push({
+                id: hashId,
+                link,
+                menuItem,
+                section
+            });
+        });
+
+        if (sectionEntries.length === 0) {
+            return;
+        }
+
+        nav.classList.add('has-scrollspy');
+
+        const setActiveLink = (activeLink) => {
+            navLinks.forEach((link) => {
+                const isActive = link === activeLink;
+                const menuItem = link.closest('li');
+
+                link.classList.toggle('is-active', isActive);
+                if (menuItem) {
+                    menuItem.classList.toggle('is-active', isActive);
+                }
+
+                if (isActive) {
+                    link.setAttribute('data-scrollspy-current', '1');
+                    link.setAttribute('aria-current', 'page');
+                    return;
+                }
+
+                if (link.getAttribute('data-scrollspy-current') === '1') {
+                    link.removeAttribute('data-scrollspy-current');
+                    link.removeAttribute('aria-current');
+                }
+            });
+        };
+
+        const resolveActiveEntryByViewport = () => {
+            const header = document.querySelector('.site-header');
+            const headerOffset = header ? header.getBoundingClientRect().height : 0;
+            const scanLine = window.scrollY + headerOffset + 20;
+
+            const positionedEntries = sectionEntries
+                .map((entry) => {
+                    const rect = entry.section.getBoundingClientRect();
+                    const top = rect.top + window.scrollY;
+
+                    return {
+                        entry,
+                        top,
+                        bottom: top + Math.max(rect.height, 1)
+                    };
+                })
+                .sort((a, b) => a.top - b.top);
+
+            for (let index = 0; index < positionedEntries.length; index += 1) {
+                const current = positionedEntries[index];
+                if (scanLine >= current.top && scanLine < current.bottom) {
+                    return current.entry;
+                }
+            }
+
+            return null;
+        };
+
+        const syncActiveState = () => {
+            const activeEntry = resolveActiveEntryByViewport();
+            setActiveLink(activeEntry ? activeEntry.link : null);
+        };
+
+        let pending = false;
+        const scheduleSync = () => {
+            if (pending) {
+                return;
+            }
+
+            pending = true;
+            window.requestAnimationFrame(() => {
+                pending = false;
+                syncActiveState();
+            });
+        };
+
+        window.addEventListener('scroll', scheduleSync, { passive: true });
+        window.addEventListener('resize', scheduleSync);
+        window.addEventListener('hashchange', scheduleSync);
+        window.addEventListener('load', scheduleSync, { once: true });
+
+        scheduleSync();
     };
 
     const initHeroSlider = (slider) => {

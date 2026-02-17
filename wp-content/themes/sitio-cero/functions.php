@@ -384,14 +384,138 @@ add_action('customize_register', 'sitio_cero_customize_register');
 function sitio_cero_menu_fallback()
 {
     $home = esc_url(home_url('/'));
+    $direcciones_url = esc_url(home_url('/?post_type=direccion_municipal'));
+    $direcciones_label = sitio_cero_get_direccion_menu_label();
 
     echo '<ul class="site-nav__list">';
     echo '<li><a href="' . $home . '">' . esc_html__('Inicio', 'sitio-cero') . '</a></li>';
     echo '<li><a href="' . $home . '#avisos">' . esc_html__('Avisos', 'sitio-cero') . '</a></li>';
     echo '<li><a href="' . $home . '#noticias">' . esc_html__('Noticias', 'sitio-cero') . '</a></li>';
+    echo '<li><a href="' . $direcciones_url . '">' . esc_html($direcciones_label) . '</a></li>';
     echo '<li><a href="' . $home . '#agenda">' . esc_html__('Agenda', 'sitio-cero') . '</a></li>';
     echo '</ul>';
 }
+
+function sitio_cero_get_direccion_menu_label()
+{
+    $posts = get_posts(
+        array(
+            'post_type'      => 'direccion_municipal',
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'orderby'        => 'menu_order title',
+            'order'          => 'ASC',
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!empty($posts)) {
+        $title = get_the_title((int) $posts[0]);
+        if (is_string($title) && '' !== trim($title)) {
+            return $title;
+        }
+    }
+
+    $post_type = get_post_type_object('direccion_municipal');
+    if ($post_type && isset($post_type->labels->menu_name) && is_string($post_type->labels->menu_name) && '' !== trim($post_type->labels->menu_name)) {
+        return $post_type->labels->menu_name;
+    }
+
+    return __('Direcciones', 'sitio-cero');
+}
+
+function sitio_cero_get_default_primary_menu_items()
+{
+    return array(
+        array(
+            'title' => __('Inicio', 'sitio-cero'),
+            'url'   => home_url('/'),
+        ),
+        array(
+            'title' => __('Avisos', 'sitio-cero'),
+            'url'   => home_url('/#avisos'),
+        ),
+        array(
+            'title' => __('Noticias', 'sitio-cero'),
+            'url'   => home_url('/#noticias'),
+        ),
+        array(
+            'title' => sitio_cero_get_direccion_menu_label(),
+            'url'   => home_url('/?post_type=direccion_municipal'),
+        ),
+        array(
+            'title' => __('Agenda', 'sitio-cero'),
+            'url'   => home_url('/#agenda'),
+        ),
+    );
+}
+
+function sitio_cero_seed_primary_menu_once()
+{
+    $seed_option = 'sitio_cero_primary_menu_seeded';
+    if ('1' === (string) get_option($seed_option, '0')) {
+        return;
+    }
+
+    if (!function_exists('has_nav_menu') || !function_exists('wp_create_nav_menu')) {
+        return;
+    }
+
+    if (has_nav_menu('primary')) {
+        update_option($seed_option, '1');
+        return;
+    }
+
+    $menu_name = __('Menu principal', 'sitio-cero');
+    $menu_object = wp_get_nav_menu_object($menu_name);
+    $menu_id = $menu_object && isset($menu_object->term_id) ? (int) $menu_object->term_id : 0;
+
+    if ($menu_id <= 0) {
+        $created_menu_id = wp_create_nav_menu($menu_name);
+        if (is_wp_error($created_menu_id) || (int) $created_menu_id <= 0) {
+            return;
+        }
+        $menu_id = (int) $created_menu_id;
+    }
+
+    $existing_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'any'));
+    if (empty($existing_items)) {
+        $default_items = sitio_cero_get_default_primary_menu_items();
+        foreach ($default_items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $item_title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+            $item_url = isset($item['url']) ? esc_url_raw((string) $item['url']) : '';
+            if ('' === $item_title || '' === $item_url) {
+                continue;
+            }
+
+            wp_update_nav_menu_item(
+                $menu_id,
+                0,
+                array(
+                    'menu-item-title'  => $item_title,
+                    'menu-item-type'   => 'custom',
+                    'menu-item-url'    => $item_url,
+                    'menu-item-status' => 'publish',
+                )
+            );
+        }
+    }
+
+    $locations = get_theme_mod('nav_menu_locations');
+    if (!is_array($locations)) {
+        $locations = array();
+    }
+    $locations['primary'] = $menu_id;
+    set_theme_mod('nav_menu_locations', $locations);
+
+    update_option($seed_option, '1');
+}
+add_action('init', 'sitio_cero_seed_primary_menu_once', 21);
 
 function sitio_cero_register_footer_columna_post_type()
 {
@@ -1508,6 +1632,99 @@ function sitio_cero_save_direccion_municipal_meta($post_id)
 }
 add_action('save_post_direccion_municipal', 'sitio_cero_save_direccion_municipal_meta');
 
+function sitio_cero_get_direccion_icon_catalog()
+{
+    return array(
+        'dideco' => array(
+            'file'  => 'dideco.png',
+            'title' => __('Icono DIDECO', 'sitio-cero'),
+        ),
+        'obras' => array(
+            'file'  => 'obras.png',
+            'title' => __('Icono Direccion de Obras', 'sitio-cero'),
+        ),
+        'transito' => array(
+            'file'  => 'transito.png',
+            'title' => __('Icono Direccion de Transito', 'sitio-cero'),
+        ),
+        'medio-ambiente' => array(
+            'file'  => 'medio-ambiente.png',
+            'title' => __('Icono Direccion de Medio Ambiente', 'sitio-cero'),
+        ),
+        'seguridad' => array(
+            'file'  => 'seguridad.png',
+            'title' => __('Icono Direccion de Seguridad Publica', 'sitio-cero'),
+        ),
+    );
+}
+
+function sitio_cero_get_or_create_direccion_icon_attachment_id($icon_key)
+{
+    $icon_key = sanitize_key((string) $icon_key);
+    if ('' === $icon_key) {
+        return 0;
+    }
+
+    $catalog = sitio_cero_get_direccion_icon_catalog();
+    if (!isset($catalog[$icon_key]) || !is_array($catalog[$icon_key])) {
+        return 0;
+    }
+
+    $option_key = 'sitio_cero_demo_direccion_icon_' . $icon_key . '_id';
+    $cached_id = (int) get_option($option_key, 0);
+    if ($cached_id > 0 && get_post($cached_id) instanceof WP_Post) {
+        return $cached_id;
+    }
+
+    $file_name = isset($catalog[$icon_key]['file']) ? sanitize_file_name((string) $catalog[$icon_key]['file']) : '';
+    if ('' === $file_name) {
+        return 0;
+    }
+
+    $source_file = get_template_directory() . '/assets/images/direcciones-icons/' . $file_name;
+    if (!file_exists($source_file)) {
+        return 0;
+    }
+
+    $file_content = file_get_contents($source_file);
+    if (false === $file_content || '' === $file_content) {
+        return 0;
+    }
+
+    $upload = wp_upload_bits('direccion-icono-' . $file_name, null, $file_content);
+    if (!is_array($upload) || !empty($upload['error']) || empty($upload['file'])) {
+        return 0;
+    }
+
+    $filetype = wp_check_filetype($upload['file']);
+    $attachment_title = isset($catalog[$icon_key]['title']) && is_string($catalog[$icon_key]['title'])
+        ? $catalog[$icon_key]['title']
+        : __('Icono direccion municipal', 'sitio-cero');
+
+    $attachment_id = wp_insert_attachment(
+        array(
+            'post_mime_type' => isset($filetype['type']) && '' !== (string) $filetype['type'] ? $filetype['type'] : 'image/png',
+            'post_title'     => sanitize_text_field($attachment_title),
+            'post_content'   => '',
+            'post_status'    => 'inherit',
+        ),
+        $upload['file']
+    );
+
+    if (is_wp_error($attachment_id) || !$attachment_id) {
+        return 0;
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    $metadata = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+    if (is_array($metadata)) {
+        wp_update_attachment_metadata($attachment_id, $metadata);
+    }
+
+    update_option($option_key, (int) $attachment_id);
+    return (int) $attachment_id;
+}
+
 function sitio_cero_get_default_direcciones_municipales_examples()
 {
     return array(
@@ -1540,6 +1757,7 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             ),
             'custom_html' => '<h3>Canales digitales</h3><p>Tambien puedes gestionar solicitudes por formulario web y mesa de ayuda municipal.</p>',
             'custom_css'  => '{{selector}} h3{color:#0f2343;} {{selector}} p{line-height:1.65;}',
+            'icon_key'    => 'dideco',
         ),
         array(
             'title'      => __('Direccion de Obras Municipales', 'sitio-cero'),
@@ -1565,6 +1783,7 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             ),
             'custom_html' => '<div class="dm-note"><strong>Nota:</strong> Revisa requisitos actualizados antes de ingresar tu solicitud.</div>',
             'custom_css'  => '{{selector}} .dm-note{padding:12px 14px;border-radius:10px;background:#edf4ff;border:1px solid #c9d7ee;}',
+            'icon_key'    => 'obras',
         ),
         array(
             'title'      => __('Direccion de Transito y Transporte Publico', 'sitio-cero'),
@@ -1590,6 +1809,7 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             ),
             'custom_html' => '<p><a href="#">Ver calendario de atencion</a></p>',
             'custom_css'  => '{{selector}} a{font-weight:700;text-decoration:underline;}',
+            'icon_key'    => 'transito',
         ),
         array(
             'title'      => __('Direccion de Medio Ambiente', 'sitio-cero'),
@@ -1615,6 +1835,7 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             ),
             'custom_html' => '<p>Integra material audiovisual y recursos descargables para actividades comunitarias.</p>',
             'custom_css'  => '{{selector}} p{margin-bottom:.6rem;}',
+            'icon_key'    => 'medio-ambiente',
         ),
         array(
             'title'      => __('Direccion de Seguridad Publica', 'sitio-cero'),
@@ -1640,6 +1861,7 @@ function sitio_cero_get_default_direcciones_municipales_examples()
             ),
             'custom_html' => '<iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Video informativo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>',
             'custom_css'  => '{{selector}} iframe{max-width:100%;width:100%;border-radius:12px;}',
+            'icon_key'    => 'seguridad',
         ),
     );
 }
@@ -1650,7 +1872,7 @@ function sitio_cero_seed_default_direcciones_municipales()
         return;
     }
 
-    $seed_version = '3';
+    $seed_version = '4';
     $already_seeded_version = (string) get_option('sitio_cero_default_direcciones_seeded_version', '');
     if ($seed_version === $already_seeded_version) {
         return;
@@ -1729,6 +1951,13 @@ function sitio_cero_seed_default_direcciones_municipales()
         }
         if (isset($item['direccion']) && is_string($item['direccion'])) {
             update_post_meta($post_id, 'sitio_cero_direccion_direccion', sanitize_text_field($item['direccion']));
+        }
+
+        if (isset($item['icon_key']) && is_string($item['icon_key']) && !has_post_thumbnail($post_id)) {
+            $icon_attachment_id = sitio_cero_get_or_create_direccion_icon_attachment_id($item['icon_key']);
+            if ($icon_attachment_id > 0) {
+                set_post_thumbnail($post_id, $icon_attachment_id);
+            }
         }
 
         $recursos_titulo = isset($item['recursos_titulo']) && is_string($item['recursos_titulo'])
