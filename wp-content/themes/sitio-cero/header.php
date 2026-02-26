@@ -52,6 +52,7 @@
                     'theme_location' => 'primary',
                     'container'      => false,
                     'menu_class'     => 'site-nav__list',
+                    'depth'          => 2,
                     'fallback_cb'    => 'sitio_cero_menu_fallback',
                 )
             );

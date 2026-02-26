@@ -212,8 +212,8 @@ get_header();
         </div>
     </section>
 
-    <section id="avisos" class="section section--paper">
-        <div class="container">
+    <section id="avisos" class="section section--paper section--avisos-full">
+        <div class="container avisos-section__inner">
             <?php
             $avisos_query = new WP_Query(
                 array(
@@ -284,57 +284,175 @@ get_header();
     </section>
 
     <section class="section section--light">
-        <div class="container info-grid">
+        <?php
+        $canal_ciudadano_query = new WP_Query(
+            array(
+                'post_type'      => 'canal_ciudadano',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'orderby'        => array(
+                    'menu_order' => 'ASC',
+                    'date'       => 'DESC',
+                ),
+                'meta_query'     => array(
+                    'relation' => 'OR',
+                    array(
+                        'key'     => 'sitio_cero_canal_visible',
+                        'compare' => 'NOT EXISTS',
+                    ),
+                    array(
+                        'key'     => 'sitio_cero_canal_visible',
+                        'value'   => '1',
+                        'compare' => '=',
+                    ),
+                ),
+            )
+        );
+        $has_canal_ciudadano = $canal_ciudadano_query->have_posts();
+        ?>
+        <div class="container info-grid<?php echo $has_canal_ciudadano ? '' : ' info-grid--single'; ?>">
             <article class="info-panel">
                 <h2>Temas ciudadanos</h2>
-                <div class="topic-grid">
-                    <a class="topic-pill" href="#">Aseo y ornato</a>
-                    <a class="topic-pill" href="#">Seguridad publica</a>
-                    <a class="topic-pill" href="#">Transito y movilidad</a>
-                    <a class="topic-pill" href="#">Cultura y deporte</a>
-                    <a class="topic-pill" href="#">Salud comunal</a>
-                    <a class="topic-pill" href="#">Educacion municipal</a>
-                </div>
+                <?php
+                wp_nav_menu(
+                    array(
+                        'theme_location' => 'temas_ciudadanos',
+                        'container'      => false,
+                        'menu_id'        => 'menu-temas-ciudadanos',
+                        'menu_class'     => 'topic-grid',
+                        'depth'          => 1,
+                        'fallback_cb'    => 'sitio_cero_temas_ciudadanos_menu_fallback',
+                    )
+                );
+                ?>
             </article>
 
-            <article class="info-panel info-panel--notice">
-                <h2>Canal de reportes y emergencias urbanas</h2>
-                <p>
-                    Si detectas luminarias apagadas, semaforos con falla o situacion de riesgo vial, ingresa tu reporte en linea y recibe seguimiento.
-                </p>
-                <a class="button button--light" href="#canales">Ir a canales de atencion</a>
-            </article>
+            <?php if ($has_canal_ciudadano) : ?>
+                <?php
+                while ($canal_ciudadano_query->have_posts()) :
+                    $canal_ciudadano_query->the_post();
+                    $canal_button_label = get_post_meta(get_the_ID(), 'sitio_cero_canal_button_label', true);
+                    $canal_button_url = get_post_meta(get_the_ID(), 'sitio_cero_canal_button_url', true);
+                    $canal_content_raw = get_post_field('post_content', get_the_ID());
+
+                    if (!is_string($canal_button_label)) {
+                        $canal_button_label = '';
+                    }
+                    if (!is_string($canal_button_url)) {
+                        $canal_button_url = '';
+                    }
+                    if (!is_string($canal_content_raw)) {
+                        $canal_content_raw = '';
+                    }
+
+                    $canal_content_html = '';
+                    if ('' !== trim($canal_content_raw)) {
+                        $canal_content_html = apply_filters('the_content', $canal_content_raw);
+                    }
+                    ?>
+                    <article class="info-panel info-panel--notice">
+                        <h2><?php the_title(); ?></h2>
+                        <?php if ('' !== trim($canal_content_html)) : ?>
+                            <?php echo wp_kses_post($canal_content_html); ?>
+                        <?php endif; ?>
+                        <?php if ('' !== trim($canal_button_label) && '' !== trim($canal_button_url)) : ?>
+                            <a class="button button--light" href="<?php echo esc_url($canal_button_url); ?>"><?php echo esc_html($canal_button_label); ?></a>
+                        <?php endif; ?>
+                    </article>
+                <?php endwhile; ?>
+                <?php wp_reset_postdata(); ?>
+            <?php endif; ?>
         </div>
     </section>
 
     <section id="agenda" class="section section--accent">
-        <div class="container agenda-grid">
-            <article class="agenda-card">
-                <h2>Proximas actividades</h2>
-                <ul class="agenda-list">
-                    <li>
-                        <span class="agenda-date">18 FEB</span>
-                        <div>
-                            <h3>Operativo de limpieza barrial</h3>
-                            <p>Plaza principal - 09:30 hrs</p>
-                        </div>
-                    </li>
-                    <li>
-                        <span class="agenda-date">21 FEB</span>
-                        <div>
-                            <h3>Feria de servicios municipales</h3>
-                            <p>Centro comunitario - 11:00 hrs</p>
-                        </div>
-                    </li>
-                    <li>
-                        <span class="agenda-date">27 FEB</span>
-                        <div>
-                            <h3>Cabildo ciudadano sector norte</h3>
-                            <p>Sede vecinal 12 - 18:30 hrs</p>
-                        </div>
-                    </li>
-                </ul>
-            </article>
+        <?php
+        $eventos_archive_url = get_post_type_archive_link('evento_municipal');
+        if (!is_string($eventos_archive_url) || '' === trim($eventos_archive_url)) {
+            $eventos_archive_url = home_url('/#agenda');
+        }
+
+        $agenda_events = function_exists('sitio_cero_get_home_eventos')
+            ? sitio_cero_get_home_eventos(3)
+            : array();
+        $has_active_agenda_events = !empty($agenda_events);
+        ?>
+        <div class="container agenda-grid<?php echo $has_active_agenda_events ? '' : ' agenda-grid--single'; ?>">
+            <?php if ($has_active_agenda_events) : ?>
+                <article class="agenda-card">
+                    <div class="agenda-card__head">
+                        <h2><?php esc_html_e('Proximas actividades', 'sitio-cero'); ?></h2>
+                    </div>
+                    <ul class="agenda-list">
+                        <?php foreach ($agenda_events as $agenda_event) : ?>
+                            <?php
+                            if (!$agenda_event instanceof WP_Post) {
+                                continue;
+                            }
+
+                            $event_id = (int) $agenda_event->ID;
+                            $event_permalink = get_permalink($event_id);
+                            if (!is_string($event_permalink) || '' === trim($event_permalink)) {
+                                $event_permalink = '#';
+                            }
+
+                            $event_badge = function_exists('sitio_cero_get_evento_badge_fecha')
+                                ? sitio_cero_get_evento_badge_fecha($event_id)
+                                : '';
+                            if ('' === $event_badge) {
+                                $event_badge = get_the_date('d M', $event_id);
+                                if (!is_string($event_badge)) {
+                                    $event_badge = '';
+                                }
+                                if (function_exists('mb_strtoupper')) {
+                                    $event_badge = mb_strtoupper($event_badge, 'UTF-8');
+                                } else {
+                                    $event_badge = strtoupper($event_badge);
+                                }
+                            }
+
+                            $event_time = function_exists('sitio_cero_get_evento_hora')
+                                ? sitio_cero_get_evento_hora($event_id)
+                                : '';
+                            $event_place = get_post_meta($event_id, 'sitio_cero_evento_lugar', true);
+                            $event_map_url = get_post_meta($event_id, 'sitio_cero_evento_mapa_url', true);
+
+                            if (!is_string($event_place)) {
+                                $event_place = '';
+                            }
+                            if (!is_string($event_map_url)) {
+                                $event_map_url = '';
+                            }
+
+                            $event_details = trim($event_place);
+                            if ('' !== $event_time) {
+                                $event_details .= ('' !== $event_details ? ' - ' : '') . $event_time . ' hrs';
+                            }
+                            ?>
+                            <li>
+                                <span class="agenda-date"><?php echo esc_html($event_badge); ?></span>
+                                <div>
+                                    <h3><a href="<?php echo esc_url($event_permalink); ?>"><?php echo esc_html(get_the_title($event_id)); ?></a></h3>
+                                    <?php if ('' !== $event_details || '' !== trim($event_map_url)) : ?>
+                                        <p>
+                                            <?php if ('' !== $event_details) : ?>
+                                                <?php echo esc_html($event_details); ?>
+                                            <?php endif; ?>
+                                            <?php if ('' !== trim($event_map_url)) : ?>
+                                                <a class="agenda-map-link" href="<?php echo esc_url($event_map_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Ver mapa', 'sitio-cero'); ?></a>
+                                            <?php endif; ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+
+                    <a class="button button--light agenda-card__cta" href="<?php echo esc_url($eventos_archive_url); ?>">
+                        <?php esc_html_e('Ver todos los eventos', 'sitio-cero'); ?>
+                    </a>
+                </article>
+            <?php endif; ?>
 
             <article class="agenda-card agenda-card--channels" id="canales">
                 <h2>Canales para resolver tus consultas</h2>

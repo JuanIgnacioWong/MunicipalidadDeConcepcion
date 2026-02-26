@@ -21,8 +21,9 @@ function sitio_cero_setup()
 
     register_nav_menus(
         array(
-            'primary'   => __('Menu principal', 'sitio-cero'),
-            'hero_info' => __('Menu Quiero informacion', 'sitio-cero'),
+            'primary'          => __('Menu principal', 'sitio-cero'),
+            'hero_info'        => __('Menu Quiero informacion', 'sitio-cero'),
+            'temas_ciudadanos' => __('Menu Temas ciudadanos', 'sitio-cero'),
         )
     );
 }
@@ -384,45 +385,106 @@ add_action('customize_register', 'sitio_cero_customize_register');
 function sitio_cero_menu_fallback()
 {
     $home = esc_url(home_url('/'));
-    $direcciones_url = esc_url(home_url('/?post_type=direccion_municipal'));
+    $direcciones_url = get_post_type_archive_link('direccion_municipal');
+    if (!is_string($direcciones_url) || '' === trim($direcciones_url)) {
+        $direcciones_url = home_url('/?post_type=direccion_municipal');
+    }
+    $direcciones_url = esc_url($direcciones_url);
     $direcciones_label = sitio_cero_get_direccion_menu_label();
+    $direcciones_posts = sitio_cero_get_direccion_menu_posts();
 
     echo '<ul class="site-nav__list">';
     echo '<li><a href="' . $home . '">' . esc_html__('Inicio', 'sitio-cero') . '</a></li>';
     echo '<li><a href="' . $home . '#avisos">' . esc_html__('Avisos', 'sitio-cero') . '</a></li>';
     echo '<li><a href="' . $home . '#noticias">' . esc_html__('Noticias', 'sitio-cero') . '</a></li>';
-    echo '<li><a href="' . $direcciones_url . '">' . esc_html($direcciones_label) . '</a></li>';
+
+    if (!empty($direcciones_posts)) {
+        echo '<li class="menu-item-has-children">';
+        echo '<a href="' . $direcciones_url . '">' . esc_html($direcciones_label) . '</a>';
+        echo '<ul class="sub-menu">';
+        foreach ($direcciones_posts as $direccion_post) {
+            if (!$direccion_post instanceof WP_Post) {
+                continue;
+            }
+
+            $direccion_title = sanitize_text_field((string) $direccion_post->post_title);
+            $direccion_url = get_permalink((int) $direccion_post->ID);
+            if (!is_string($direccion_url) || '' === trim($direccion_url)) {
+                continue;
+            }
+
+            echo '<li><a href="' . esc_url($direccion_url) . '">' . esc_html($direccion_title) . '</a></li>';
+        }
+        echo '</ul>';
+        echo '</li>';
+    } else {
+        echo '<li><a href="' . $direcciones_url . '">' . esc_html($direcciones_label) . '</a></li>';
+    }
+
     echo '<li><a href="' . $home . '#agenda">' . esc_html__('Agenda', 'sitio-cero') . '</a></li>';
     echo '</ul>';
 }
 
 function sitio_cero_get_direccion_menu_label()
 {
+    $post_type = get_post_type_object('direccion_municipal');
+    if ($post_type && isset($post_type->labels->name) && is_string($post_type->labels->name) && '' !== trim($post_type->labels->name)) {
+        return $post_type->labels->name;
+    }
+
+    return __('Direcciones municipales', 'sitio-cero');
+}
+
+function sitio_cero_get_direccion_menu_posts()
+{
+    if (!post_type_exists('direccion_municipal')) {
+        return array();
+    }
+
     $posts = get_posts(
         array(
             'post_type'      => 'direccion_municipal',
             'post_status'    => 'publish',
-            'posts_per_page' => 1,
-            'orderby'        => 'menu_order title',
-            'order'          => 'ASC',
-            'fields'         => 'ids',
+            'posts_per_page' => -1,
+            'orderby'        => array(
+                'menu_order' => 'ASC',
+                'title'      => 'ASC',
+                'date'       => 'ASC',
+            ),
             'no_found_rows'  => true,
         )
     );
 
-    if (!empty($posts)) {
-        $title = get_the_title((int) $posts[0]);
-        if (is_string($title) && '' !== trim($title)) {
-            return $title;
-        }
+    return is_array($posts) ? $posts : array();
+}
+
+function sitio_cero_is_direcciones_menu_item($menu_item)
+{
+    if (!$menu_item instanceof WP_Post) {
+        return false;
     }
 
-    $post_type = get_post_type_object('direccion_municipal');
-    if ($post_type && isset($post_type->labels->menu_name) && is_string($post_type->labels->menu_name) && '' !== trim($post_type->labels->menu_name)) {
-        return $post_type->labels->menu_name;
+    $item_type = isset($menu_item->type) ? (string) $menu_item->type : '';
+    $item_object = isset($menu_item->object) ? (string) $menu_item->object : '';
+    if (
+        ('post_type_archive' === $item_type || 'post_type' === $item_type)
+        && 'direccion_municipal' === $item_object
+    ) {
+        return true;
     }
 
-    return __('Direcciones', 'sitio-cero');
+    $item_url = isset($menu_item->url) ? strtolower((string) $menu_item->url) : '';
+    if (
+        '' !== $item_url
+        && (
+            false !== strpos($item_url, 'post_type=direccion_municipal')
+            || false !== strpos($item_url, '/direcciones-municipales')
+        )
+    ) {
+        return true;
+    }
+
+    return false;
 }
 
 function sitio_cero_get_default_primary_menu_items()
@@ -516,6 +578,246 @@ function sitio_cero_seed_primary_menu_once()
     update_option($seed_option, '1');
 }
 add_action('init', 'sitio_cero_seed_primary_menu_once', 21);
+
+function sitio_cero_seed_primary_direcciones_mega_once()
+{
+    $seed_option = 'sitio_cero_primary_menu_direcciones_mega_seeded';
+    $seed_version = '1';
+    if ($seed_version === (string) get_option($seed_option, '')) {
+        return;
+    }
+
+    if (!post_type_exists('direccion_municipal')) {
+        return;
+    }
+
+    $locations = get_theme_mod('nav_menu_locations');
+    $menu_id = (is_array($locations) && isset($locations['primary'])) ? absint($locations['primary']) : 0;
+    if ($menu_id <= 0) {
+        return;
+    }
+
+    $menu_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'any'));
+    if (!is_array($menu_items)) {
+        $menu_items = array();
+    }
+
+    $direcciones_parent_id = 0;
+    foreach ($menu_items as $menu_item) {
+        if (!$menu_item instanceof WP_Post) {
+            continue;
+        }
+
+        if ((int) $menu_item->menu_item_parent !== 0) {
+            continue;
+        }
+
+        if (sitio_cero_is_direcciones_menu_item($menu_item)) {
+            $direcciones_parent_id = (int) $menu_item->ID;
+            break;
+        }
+    }
+
+    $direcciones_archive_url = get_post_type_archive_link('direccion_municipal');
+    if (!is_string($direcciones_archive_url) || '' === trim($direcciones_archive_url)) {
+        $direcciones_archive_url = home_url('/?post_type=direccion_municipal');
+    }
+
+    if ($direcciones_parent_id <= 0) {
+        $parent_result = wp_update_nav_menu_item(
+            $menu_id,
+            0,
+            array(
+                'menu-item-title'  => sitio_cero_get_direccion_menu_label(),
+                'menu-item-type'   => 'custom',
+                'menu-item-url'    => esc_url_raw($direcciones_archive_url),
+                'menu-item-status' => 'publish',
+            )
+        );
+        if (is_wp_error($parent_result) || (int) $parent_result <= 0) {
+            return;
+        }
+        $direcciones_parent_id = (int) $parent_result;
+    }
+
+    $menu_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'any'));
+    if (!is_array($menu_items)) {
+        $menu_items = array();
+    }
+
+    $existing_child_object_ids = array();
+    foreach ($menu_items as $menu_item) {
+        if (
+            !$menu_item instanceof WP_Post
+            || (int) $menu_item->menu_item_parent !== $direcciones_parent_id
+        ) {
+            continue;
+        }
+
+        if ('post_type' === (string) $menu_item->type && 'direccion_municipal' === (string) $menu_item->object) {
+            $existing_child_object_ids[(int) $menu_item->object_id] = (int) $menu_item->ID;
+        }
+    }
+
+    $direcciones_posts = sitio_cero_get_direccion_menu_posts();
+    foreach ($direcciones_posts as $direccion_post) {
+        if (!$direccion_post instanceof WP_Post) {
+            continue;
+        }
+
+        $direccion_id = (int) $direccion_post->ID;
+        if ($direccion_id <= 0) {
+            continue;
+        }
+
+        if (isset($existing_child_object_ids[$direccion_id])) {
+            $existing_child_menu_id = (int) $existing_child_object_ids[$direccion_id];
+            if ('' === trim((string) get_post_meta($existing_child_menu_id, '_sitio_cero_menu_icon', true))) {
+                update_post_meta($existing_child_menu_id, '_sitio_cero_menu_icon', 'google:apartment');
+            }
+            continue;
+        }
+
+        $child_result = wp_update_nav_menu_item(
+            $menu_id,
+            0,
+            array(
+                'menu-item-title'     => sanitize_text_field((string) $direccion_post->post_title),
+                'menu-item-object-id' => $direccion_id,
+                'menu-item-object'    => 'direccion_municipal',
+                'menu-item-parent-id' => $direcciones_parent_id,
+                'menu-item-type'      => 'post_type',
+                'menu-item-status'    => 'publish',
+            )
+        );
+
+        if (!is_wp_error($child_result) && (int) $child_result > 0) {
+            update_post_meta((int) $child_result, '_sitio_cero_menu_icon', 'google:apartment');
+        }
+    }
+
+    update_option($seed_option, $seed_version);
+}
+add_action('init', 'sitio_cero_seed_primary_direcciones_mega_once', 70);
+
+function sitio_cero_get_temas_ciudadanos_default_items()
+{
+    return array(
+        array(
+            'label' => __('Aseo y ornato', 'sitio-cero'),
+            'url'   => '#',
+        ),
+        array(
+            'label' => __('Seguridad publica', 'sitio-cero'),
+            'url'   => '#',
+        ),
+        array(
+            'label' => __('Transito y movilidad', 'sitio-cero'),
+            'url'   => '#',
+        ),
+        array(
+            'label' => __('Cultura y deporte', 'sitio-cero'),
+            'url'   => '#',
+        ),
+        array(
+            'label' => __('Salud comunal', 'sitio-cero'),
+            'url'   => '#',
+        ),
+        array(
+            'label' => __('Educacion municipal', 'sitio-cero'),
+            'url'   => '#',
+        ),
+    );
+}
+
+function sitio_cero_temas_ciudadanos_menu_fallback()
+{
+    $default_items = sitio_cero_get_temas_ciudadanos_default_items();
+
+    echo '<ul id="menu-temas-ciudadanos" class="topic-grid">';
+    foreach ($default_items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $item_label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+        $item_url = isset($item['url']) ? esc_url((string) $item['url']) : '#';
+        if ('' === $item_label) {
+            continue;
+        }
+
+        echo '<li class="menu-item">';
+        echo '<a href="' . $item_url . '">' . esc_html($item_label) . '</a>';
+        echo '</li>';
+    }
+    echo '</ul>';
+}
+
+function sitio_cero_seed_temas_ciudadanos_menu_once()
+{
+    $seed_option = 'sitio_cero_temas_ciudadanos_menu_seeded';
+    if ('1' === (string) get_option($seed_option, '0')) {
+        return;
+    }
+
+    if (!function_exists('has_nav_menu') || !function_exists('wp_create_nav_menu')) {
+        return;
+    }
+
+    if (has_nav_menu('temas_ciudadanos')) {
+        update_option($seed_option, '1');
+        return;
+    }
+
+    $menu_name = __('Temas ciudadanos', 'sitio-cero');
+    $menu_object = wp_get_nav_menu_object($menu_name);
+    $menu_id = $menu_object && isset($menu_object->term_id) ? (int) $menu_object->term_id : 0;
+
+    if ($menu_id <= 0) {
+        $created_menu_id = wp_create_nav_menu($menu_name);
+        if (is_wp_error($created_menu_id) || (int) $created_menu_id <= 0) {
+            return;
+        }
+        $menu_id = (int) $created_menu_id;
+    }
+
+    $existing_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'any'));
+    if (empty($existing_items)) {
+        $default_items = sitio_cero_get_temas_ciudadanos_default_items();
+        foreach ($default_items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $item_label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+            $item_url = isset($item['url']) ? esc_url_raw((string) $item['url']) : '';
+            if ('' === $item_label || '' === $item_url) {
+                continue;
+            }
+
+            wp_update_nav_menu_item(
+                $menu_id,
+                0,
+                array(
+                    'menu-item-title'  => $item_label,
+                    'menu-item-type'   => 'custom',
+                    'menu-item-url'    => $item_url,
+                    'menu-item-status' => 'publish',
+                )
+            );
+        }
+    }
+
+    $locations = get_theme_mod('nav_menu_locations');
+    if (!is_array($locations)) {
+        $locations = array();
+    }
+    $locations['temas_ciudadanos'] = $menu_id;
+    set_theme_mod('nav_menu_locations', $locations);
+
+    update_option($seed_option, '1');
+}
+add_action('init', 'sitio_cero_seed_temas_ciudadanos_menu_once', 22);
 
 function sitio_cero_register_footer_columna_post_type()
 {
@@ -735,6 +1037,761 @@ function sitio_cero_register_direccion_municipal_post_type()
     );
 }
 add_action('init', 'sitio_cero_register_direccion_municipal_post_type');
+
+function sitio_cero_register_canal_ciudadano_post_type()
+{
+    $labels = array(
+        'name'               => __('Canales ciudadanos', 'sitio-cero'),
+        'singular_name'      => __('Canal ciudadano', 'sitio-cero'),
+        'menu_name'          => __('Canal reportes', 'sitio-cero'),
+        'name_admin_bar'     => __('Canal ciudadano', 'sitio-cero'),
+        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
+        'add_new_item'       => __('Agregar canal ciudadano', 'sitio-cero'),
+        'new_item'           => __('Nuevo canal ciudadano', 'sitio-cero'),
+        'edit_item'          => __('Editar canal ciudadano', 'sitio-cero'),
+        'view_item'          => __('Ver canal ciudadano', 'sitio-cero'),
+        'all_items'          => __('Todos los canales', 'sitio-cero'),
+        'search_items'       => __('Buscar canales', 'sitio-cero'),
+        'not_found'          => __('No se encontraron canales.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay canales en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'canal_ciudadano',
+        array(
+            'labels'             => $labels,
+            'public'             => false,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'show_in_admin_bar'  => true,
+            'show_in_nav_menus'  => false,
+            'show_in_rest'       => true,
+            'exclude_from_search'=> true,
+            'publicly_queryable' => false,
+            'has_archive'        => false,
+            'rewrite'            => false,
+            'menu_position'      => 26,
+            'menu_icon'          => 'dashicons-warning',
+            'supports'           => array('title', 'editor', 'page-attributes', 'revisions'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_canal_ciudadano_post_type');
+
+function sitio_cero_add_canal_ciudadano_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_canal_ciudadano_settings',
+        __('Configuracion de portada', 'sitio-cero'),
+        'sitio_cero_render_canal_ciudadano_metabox',
+        'canal_ciudadano',
+        'side',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_canal_ciudadano_metaboxes');
+
+function sitio_cero_render_canal_ciudadano_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_canal_ciudadano_meta', 'sitio_cero_canal_ciudadano_meta_nonce');
+
+    $visible_value = get_post_meta($post->ID, 'sitio_cero_canal_visible', true);
+    $visible = '' === (string) $visible_value || '1' === (string) $visible_value;
+    $button_label = get_post_meta($post->ID, 'sitio_cero_canal_button_label', true);
+    $button_url = get_post_meta($post->ID, 'sitio_cero_canal_button_url', true);
+
+    if (!is_string($button_label)) {
+        $button_label = '';
+    }
+    if (!is_string($button_url)) {
+        $button_url = '';
+    }
+    ?>
+    <p>
+        <label>
+            <input type="checkbox" name="sitio_cero_canal_visible" value="1"<?php checked($visible); ?>>
+            <?php esc_html_e('Mostrar este bloque en el front page', 'sitio-cero'); ?>
+        </label>
+    </p>
+    <p>
+        <label for="sitio_cero_canal_button_label"><strong><?php esc_html_e('Texto del boton (opcional)', 'sitio-cero'); ?></strong></label>
+        <input id="sitio_cero_canal_button_label" type="text" name="sitio_cero_canal_button_label" class="widefat" value="<?php echo esc_attr($button_label); ?>" placeholder="<?php esc_attr_e('Ejemplo: Ir a canales de atencion', 'sitio-cero'); ?>">
+    </p>
+    <p>
+        <label for="sitio_cero_canal_button_url"><strong><?php esc_html_e('URL del boton (opcional)', 'sitio-cero'); ?></strong></label>
+        <input id="sitio_cero_canal_button_url" type="url" name="sitio_cero_canal_button_url" class="widefat" value="<?php echo esc_attr(esc_url_raw($button_url)); ?>" placeholder="#canales">
+    </p>
+    <p class="description">
+        <?php esc_html_e('Si creas varios canales visibles, se mostrara el primero segun orden de menu.', 'sitio-cero'); ?>
+    </p>
+    <?php
+}
+
+function sitio_cero_save_canal_ciudadano_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_canal_ciudadano_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_canal_ciudadano_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_canal_ciudadano_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $is_visible = isset($_POST['sitio_cero_canal_visible']) && '1' === (string) wp_unslash($_POST['sitio_cero_canal_visible']);
+    update_post_meta($post_id, 'sitio_cero_canal_visible', $is_visible ? '1' : '0');
+
+    $button_label = isset($_POST['sitio_cero_canal_button_label'])
+        ? sanitize_text_field(wp_unslash($_POST['sitio_cero_canal_button_label']))
+        : '';
+    if ('' !== $button_label) {
+        update_post_meta($post_id, 'sitio_cero_canal_button_label', $button_label);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_canal_button_label');
+    }
+
+    $button_url = isset($_POST['sitio_cero_canal_button_url'])
+        ? esc_url_raw(wp_unslash($_POST['sitio_cero_canal_button_url']))
+        : '';
+    if ('' !== $button_url) {
+        update_post_meta($post_id, 'sitio_cero_canal_button_url', $button_url);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_canal_button_url');
+    }
+}
+add_action('save_post_canal_ciudadano', 'sitio_cero_save_canal_ciudadano_meta');
+
+function sitio_cero_seed_default_canal_ciudadano()
+{
+    if (!post_type_exists('canal_ciudadano')) {
+        return;
+    }
+
+    $seed_version = '1';
+    $already_seeded_version = (string) get_option('sitio_cero_default_canal_ciudadano_seeded_version', '');
+    if ($seed_version === $already_seeded_version) {
+        return;
+    }
+
+    $title = __('Canal de reportes y emergencias urbanas', 'sitio-cero');
+    $slug = sanitize_title($title);
+
+    $existing = get_posts(
+        array(
+            'post_type'      => 'canal_ciudadano',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'name'           => $slug,
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!empty($existing)) {
+        $post_id = (int) $existing[0];
+    } else {
+        $post_id = wp_insert_post(
+            array(
+                'post_type'    => 'canal_ciudadano',
+                'post_status'  => 'publish',
+                'post_title'   => $title,
+                'post_name'    => $slug,
+                'post_content' => __('Si detectas luminarias apagadas, semaforos con falla o situacion de riesgo vial, ingresa tu reporte en linea y recibe seguimiento.', 'sitio-cero'),
+                'menu_order'   => 1,
+            ),
+            true
+        );
+    }
+
+    if (is_wp_error($post_id) || !$post_id) {
+        return;
+    }
+
+    update_post_meta((int) $post_id, '_sitio_cero_demo_canal_ciudadano', '1');
+    update_post_meta((int) $post_id, 'sitio_cero_canal_visible', '1');
+    update_post_meta((int) $post_id, 'sitio_cero_canal_button_label', __('Ir a canales de atencion', 'sitio-cero'));
+    update_post_meta((int) $post_id, 'sitio_cero_canal_button_url', '#canales');
+
+    update_option('sitio_cero_default_canal_ciudadano_seeded_version', $seed_version);
+}
+add_action('init', 'sitio_cero_seed_default_canal_ciudadano', 47);
+
+function sitio_cero_register_evento_municipal_post_type()
+{
+    $labels = array(
+        'name'               => __('Actividades', 'sitio-cero'),
+        'singular_name'      => __('Actividad', 'sitio-cero'),
+        'menu_name'          => __('Proximas actividades', 'sitio-cero'),
+        'name_admin_bar'     => __('Actividad', 'sitio-cero'),
+        'add_new'            => __('Agregar nueva', 'sitio-cero'),
+        'add_new_item'       => __('Agregar actividad', 'sitio-cero'),
+        'new_item'           => __('Nueva actividad', 'sitio-cero'),
+        'edit_item'          => __('Editar actividad', 'sitio-cero'),
+        'view_item'          => __('Ver actividad', 'sitio-cero'),
+        'all_items'          => __('Todas las actividades', 'sitio-cero'),
+        'search_items'       => __('Buscar actividades', 'sitio-cero'),
+        'not_found'          => __('No se encontraron actividades.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay actividades en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'evento_municipal',
+        array(
+            'labels'            => $labels,
+            'public'            => true,
+            'show_ui'           => true,
+            'show_in_menu'      => true,
+            'show_in_admin_bar' => true,
+            'show_in_nav_menus' => true,
+            'show_in_rest'      => true,
+            'has_archive'       => true,
+            'rewrite'           => array('slug' => 'eventos'),
+            'menu_position'     => 23,
+            'menu_icon'         => 'dashicons-calendar-alt',
+            'supports'          => array('title', 'editor', 'excerpt', 'thumbnail', 'page-attributes', 'revisions'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_evento_municipal_post_type');
+
+function sitio_cero_flush_eventos_rewrite_rules_once()
+{
+    if (!post_type_exists('evento_municipal')) {
+        return;
+    }
+
+    $flush_version = '1';
+    $stored_version = (string) get_option('sitio_cero_eventos_rewrite_flushed_version', '');
+    if ($flush_version === $stored_version) {
+        return;
+    }
+
+    flush_rewrite_rules(false);
+    update_option('sitio_cero_eventos_rewrite_flushed_version', $flush_version);
+}
+add_action('init', 'sitio_cero_flush_eventos_rewrite_rules_once', 99);
+
+function sitio_cero_add_evento_municipal_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_evento_municipal_datos',
+        __('Datos del evento', 'sitio-cero'),
+        'sitio_cero_render_evento_municipal_metabox',
+        'evento_municipal',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_evento_municipal_metaboxes');
+
+function sitio_cero_sanitize_evento_date($value)
+{
+    $value = trim((string) $value);
+    if ('' === $value) {
+        return '';
+    }
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return '';
+    }
+
+    $parts = explode('-', $value);
+    if (3 !== count($parts)) {
+        return '';
+    }
+
+    $year = (int) $parts[0];
+    $month = (int) $parts[1];
+    $day = (int) $parts[2];
+
+    if (!checkdate($month, $day, $year)) {
+        return '';
+    }
+
+    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
+
+function sitio_cero_sanitize_evento_time($value)
+{
+    $value = trim((string) $value);
+    if ('' === $value) {
+        return '';
+    }
+
+    if (!preg_match('/^\d{2}:\d{2}$/', $value)) {
+        return '';
+    }
+
+    $parts = explode(':', $value);
+    if (2 !== count($parts)) {
+        return '';
+    }
+
+    $hours = (int) $parts[0];
+    $minutes = (int) $parts[1];
+
+    if ($hours < 0 || $hours > 23 || $minutes < 0 || $minutes > 59) {
+        return '';
+    }
+
+    return sprintf('%02d:%02d', $hours, $minutes);
+}
+
+function sitio_cero_get_evento_fecha($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return '';
+    }
+
+    $date_value = get_post_meta($post_id, 'sitio_cero_evento_fecha', true);
+    if (!is_string($date_value)) {
+        return '';
+    }
+
+    return sitio_cero_sanitize_evento_date($date_value);
+}
+
+function sitio_cero_get_evento_hora($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return '';
+    }
+
+    $time_value = get_post_meta($post_id, 'sitio_cero_evento_hora', true);
+    if (!is_string($time_value)) {
+        return '';
+    }
+
+    return sitio_cero_sanitize_evento_time($time_value);
+}
+
+function sitio_cero_format_evento_fecha($date_value, $format = 'd M')
+{
+    $clean_date = sitio_cero_sanitize_evento_date($date_value);
+    if ('' === $clean_date) {
+        return '';
+    }
+
+    $timestamp = strtotime($clean_date . ' 12:00:00');
+    if (false === $timestamp) {
+        return '';
+    }
+
+    $formatted = wp_date($format, $timestamp);
+    return is_string($formatted) ? trim($formatted) : '';
+}
+
+function sitio_cero_get_evento_badge_fecha($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return '';
+    }
+
+    $date_value = sitio_cero_get_evento_fecha($post_id);
+    if ('' === $date_value) {
+        $date_value = get_post_time('Y-m-d', false, $post_id);
+    }
+
+    $badge = sitio_cero_format_evento_fecha($date_value, 'd M');
+    if ('' === $badge) {
+        return '';
+    }
+
+    if (function_exists('mb_strtoupper')) {
+        return mb_strtoupper($badge, 'UTF-8');
+    }
+
+    return strtoupper($badge);
+}
+
+function sitio_cero_get_evento_full_fecha($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return '';
+    }
+
+    $date_value = sitio_cero_get_evento_fecha($post_id);
+    if ('' === $date_value) {
+        $date_value = get_post_time('Y-m-d', false, $post_id);
+    }
+
+    return sitio_cero_format_evento_fecha($date_value, 'd \d\e F \d\e Y');
+}
+
+function sitio_cero_get_evento_mapa_embed_url($map_url, $place = '')
+{
+    $map_url = trim((string) $map_url);
+    $place = trim((string) $place);
+
+    if ('' === $map_url && '' === $place) {
+        return '';
+    }
+
+    $query_text = '';
+    $clean_url = '';
+
+    if ('' !== $map_url) {
+        $clean_url = esc_url_raw($map_url);
+        if ('' !== $clean_url) {
+            $lower_url = strtolower($clean_url);
+            if (
+                false !== strpos($lower_url, 'google.com/maps/embed')
+                || false !== strpos($lower_url, 'google.com/maps/d/embed')
+            ) {
+                return $clean_url;
+            }
+
+            $parsed_query = wp_parse_url($clean_url, PHP_URL_QUERY);
+            if (is_string($parsed_query) && '' !== $parsed_query) {
+                $query_args = array();
+                parse_str($parsed_query, $query_args);
+
+                if (is_array($query_args)) {
+                    $candidate_keys = array('q', 'query', 'destination', 'daddr');
+                    foreach ($candidate_keys as $candidate_key) {
+                        if (!isset($query_args[$candidate_key])) {
+                            continue;
+                        }
+
+                        $candidate_value = trim((string) $query_args[$candidate_key]);
+                        if ('' !== $candidate_value) {
+                            $query_text = $candidate_value;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ('' === $query_text) {
+                $path = wp_parse_url($clean_url, PHP_URL_PATH);
+                if (is_string($path) && false !== strpos($path, '/maps/place/')) {
+                    $place_parts = explode('/maps/place/', $path, 2);
+                    if (isset($place_parts[1]) && '' !== trim((string) $place_parts[1])) {
+                        $place_path = (string) $place_parts[1];
+                        $place_segments = explode('/', $place_path);
+                        $first_segment = isset($place_segments[0]) ? (string) $place_segments[0] : '';
+                        if ('' !== trim($first_segment)) {
+                            $query_text = str_replace('+', ' ', rawurldecode($first_segment));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if ('' === $query_text && '' !== $place) {
+        $query_text = $place;
+    }
+
+    if ('' === $query_text && '' !== $clean_url) {
+        $query_text = $clean_url;
+    }
+
+    if ('' === trim($query_text)) {
+        return '';
+    }
+
+    $embed_url = add_query_arg(
+        array(
+            'q'      => $query_text,
+            'output' => 'embed',
+        ),
+        'https://www.google.com/maps'
+    );
+
+    return esc_url_raw($embed_url);
+}
+
+function sitio_cero_get_home_eventos($limit = 3)
+{
+    $limit = absint($limit);
+    if ($limit <= 0 || !post_type_exists('evento_municipal')) {
+        return array();
+    }
+
+    $today = wp_date('Y-m-d');
+    $posts = get_posts(
+        array(
+            'post_type'      => 'evento_municipal',
+            'post_status'    => 'publish',
+            'posts_per_page' => $limit,
+            'meta_key'       => 'sitio_cero_evento_fecha',
+            'meta_type'      => 'DATE',
+            'orderby'        => array(
+                'meta_value' => 'ASC',
+                'menu_order' => 'ASC',
+                'date'       => 'ASC',
+            ),
+            'meta_query'     => array(
+                array(
+                    'key'     => 'sitio_cero_evento_fecha',
+                    'value'   => $today,
+                    'compare' => '>=',
+                    'type'    => 'DATE',
+                ),
+            ),
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!is_array($posts)) {
+        $posts = array();
+    }
+
+    return $posts;
+}
+
+function sitio_cero_render_evento_municipal_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_evento_municipal_meta', 'sitio_cero_evento_municipal_meta_nonce');
+
+    $date_value = sitio_cero_get_evento_fecha($post->ID);
+    $time_value = sitio_cero_get_evento_hora($post->ID);
+    $place_value = get_post_meta($post->ID, 'sitio_cero_evento_lugar', true);
+    $map_value = get_post_meta($post->ID, 'sitio_cero_evento_mapa_url', true);
+
+    if (!is_string($place_value)) {
+        $place_value = '';
+    }
+    if (!is_string($map_value)) {
+        $map_value = '';
+    }
+    ?>
+    <p>
+        <label for="sitio_cero_evento_fecha"><strong><?php esc_html_e('Fecha del evento', 'sitio-cero'); ?></strong></label><br>
+        <input
+            id="sitio_cero_evento_fecha"
+            name="sitio_cero_evento_fecha"
+            type="date"
+            class="widefat"
+            value="<?php echo esc_attr($date_value); ?>"
+        >
+    </p>
+
+    <p>
+        <label for="sitio_cero_evento_hora"><strong><?php esc_html_e('Hora (opcional)', 'sitio-cero'); ?></strong></label><br>
+        <input
+            id="sitio_cero_evento_hora"
+            name="sitio_cero_evento_hora"
+            type="time"
+            class="widefat"
+            value="<?php echo esc_attr($time_value); ?>"
+        >
+    </p>
+
+    <p>
+        <label for="sitio_cero_evento_lugar"><strong><?php esc_html_e('Lugar (texto)', 'sitio-cero'); ?></strong></label><br>
+        <input
+            id="sitio_cero_evento_lugar"
+            name="sitio_cero_evento_lugar"
+            type="text"
+            class="widefat"
+            value="<?php echo esc_attr($place_value); ?>"
+            placeholder="<?php esc_attr_e('Ejemplo: Plaza principal, Concepcion', 'sitio-cero'); ?>"
+        >
+    </p>
+
+    <p>
+        <label for="sitio_cero_evento_mapa_url"><strong><?php esc_html_e('Google Maps o enlace de ubicacion (opcional)', 'sitio-cero'); ?></strong></label><br>
+        <input
+            id="sitio_cero_evento_mapa_url"
+            name="sitio_cero_evento_mapa_url"
+            type="url"
+            class="widefat"
+            value="<?php echo esc_attr(esc_url_raw($map_value)); ?>"
+            placeholder="https://maps.google.com/..."
+        >
+    </p>
+    <?php
+}
+
+function sitio_cero_save_evento_municipal_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_evento_municipal_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_evento_municipal_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_evento_municipal_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $date_value = isset($_POST['sitio_cero_evento_fecha'])
+        ? sitio_cero_sanitize_evento_date(wp_unslash($_POST['sitio_cero_evento_fecha']))
+        : '';
+    if ('' !== $date_value) {
+        update_post_meta($post_id, 'sitio_cero_evento_fecha', $date_value);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_evento_fecha');
+    }
+
+    $time_value = isset($_POST['sitio_cero_evento_hora'])
+        ? sitio_cero_sanitize_evento_time(wp_unslash($_POST['sitio_cero_evento_hora']))
+        : '';
+    if ('' !== $time_value) {
+        update_post_meta($post_id, 'sitio_cero_evento_hora', $time_value);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_evento_hora');
+    }
+
+    $place_value = isset($_POST['sitio_cero_evento_lugar'])
+        ? sanitize_text_field(wp_unslash($_POST['sitio_cero_evento_lugar']))
+        : '';
+    if ('' !== $place_value) {
+        update_post_meta($post_id, 'sitio_cero_evento_lugar', $place_value);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_evento_lugar');
+    }
+
+    $map_value = isset($_POST['sitio_cero_evento_mapa_url'])
+        ? esc_url_raw(wp_unslash($_POST['sitio_cero_evento_mapa_url']))
+        : '';
+    if ('' !== $map_value) {
+        update_post_meta($post_id, 'sitio_cero_evento_mapa_url', $map_value);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_evento_mapa_url');
+    }
+}
+add_action('save_post_evento_municipal', 'sitio_cero_save_evento_municipal_meta');
+
+function sitio_cero_seed_default_eventos_municipales()
+{
+    if (!post_type_exists('evento_municipal')) {
+        return;
+    }
+
+    $seed_version = '1';
+    $already_seeded_version = (string) get_option('sitio_cero_default_eventos_seeded_version', '');
+    if ($seed_version === $already_seeded_version) {
+        return;
+    }
+
+    $existing_items = get_posts(
+        array(
+            'post_type'      => 'evento_municipal',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!empty($existing_items)) {
+        update_option('sitio_cero_default_eventos_seeded_version', $seed_version);
+        return;
+    }
+
+    $base_timestamp = (int) current_time('timestamp');
+    $defaults = array(
+        array(
+            'offset_days' => 6,
+            'title'       => __('Operativo de limpieza barrial', 'sitio-cero'),
+            'content'     => __('Equipo municipal desplegado para retiro de residuos voluminosos y recuperacion de espacios comunes.', 'sitio-cero'),
+            'lugar'       => __('Plaza principal de Concepcion', 'sitio-cero'),
+            'hora'        => '09:30',
+            'mapa'        => 'https://maps.google.com/?q=Plaza+de+la+Independencia+Concepcion',
+        ),
+        array(
+            'offset_days' => 10,
+            'title'       => __('Feria de servicios municipales', 'sitio-cero'),
+            'content'     => __('Atencion en terreno con orientacion de tramites, beneficios sociales y programas comunitarios.', 'sitio-cero'),
+            'lugar'       => __('Centro comunitario Lorenzo Arenas', 'sitio-cero'),
+            'hora'        => '11:00',
+            'mapa'        => 'https://maps.google.com/?q=Lorenzo+Arenas+Concepcion',
+        ),
+        array(
+            'offset_days' => 14,
+            'title'       => __('Cabildo ciudadano sector norte', 'sitio-cero'),
+            'content'     => __('Instancia participativa para levantar propuestas vecinales y priorizar mejoras urbanas del sector.', 'sitio-cero'),
+            'lugar'       => __('Sede vecinal sector norte', 'sitio-cero'),
+            'hora'        => '18:30',
+            'mapa'        => 'https://maps.google.com/?q=Concepcion+Chile',
+        ),
+    );
+
+    foreach ($defaults as $index => $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+        $content = isset($item['content']) ? (string) $item['content'] : '';
+        if ('' === $title) {
+            continue;
+        }
+
+        $offset_days = isset($item['offset_days']) ? (int) $item['offset_days'] : 0;
+        $event_timestamp = strtotime('+' . $offset_days . ' days', $base_timestamp);
+        if (false === $event_timestamp) {
+            $event_timestamp = $base_timestamp;
+        }
+        $event_date = wp_date('Y-m-d', $event_timestamp);
+
+        $post_id = wp_insert_post(
+            array(
+                'post_type'    => 'evento_municipal',
+                'post_status'  => 'publish',
+                'post_title'   => $title,
+                'post_content' => $content,
+                'menu_order'   => (int) $index,
+            ),
+            true
+        );
+
+        if (is_wp_error($post_id) || !$post_id) {
+            continue;
+        }
+
+        update_post_meta($post_id, '_sitio_cero_demo_evento_municipal', '1');
+        update_post_meta($post_id, 'sitio_cero_evento_fecha', $event_date);
+
+        $event_time = isset($item['hora']) ? sitio_cero_sanitize_evento_time($item['hora']) : '';
+        if ('' !== $event_time) {
+            update_post_meta($post_id, 'sitio_cero_evento_hora', $event_time);
+        }
+
+        $place = isset($item['lugar']) ? sanitize_text_field((string) $item['lugar']) : '';
+        if ('' !== $place) {
+            update_post_meta($post_id, 'sitio_cero_evento_lugar', $place);
+        }
+
+        $map_url = isset($item['mapa']) ? esc_url_raw((string) $item['mapa']) : '';
+        if ('' !== $map_url) {
+            update_post_meta($post_id, 'sitio_cero_evento_mapa_url', $map_url);
+        }
+    }
+
+    update_option('sitio_cero_default_eventos_seeded_version', $seed_version);
+}
+add_action('init', 'sitio_cero_seed_default_eventos_municipales', 48);
 
 function sitio_cero_add_direccion_municipal_metaboxes()
 {
@@ -3782,8 +4839,13 @@ function sitio_cero_get_hero_info_default_items()
     );
 }
 
-function sitio_cero_get_menu_item_icon_markup($menu_item_id)
+function sitio_cero_get_menu_item_icon_markup($menu_item_id, $base_class = 'acciones-bt__icon')
 {
+    $base_class = preg_replace('/[^A-Za-z0-9_\\-]/', '', (string) $base_class);
+    if ('' === trim((string) $base_class)) {
+        $base_class = 'acciones-bt__icon';
+    }
+
     $icon_value = trim((string) get_post_meta($menu_item_id, '_sitio_cero_menu_icon', true));
     if ('' === $icon_value) {
         return '';
@@ -3792,12 +4854,12 @@ function sitio_cero_get_menu_item_icon_markup($menu_item_id)
     if (0 === strpos($icon_value, 'google:')) {
         $icon_name = sitio_cero_sanitize_google_menu_icon_name(substr($icon_value, 7));
         if ('' !== $icon_name) {
-            return '<span class="acciones-bt__icon acciones-bt__icon--google material-symbols-rounded" aria-hidden="true">' . esc_html($icon_name) . '</span>';
+            return '<span class="' . esc_attr($base_class) . ' ' . esc_attr($base_class) . '--google material-symbols-rounded" aria-hidden="true">' . esc_html($icon_name) . '</span>';
         }
     }
 
     if (wp_http_validate_url($icon_value)) {
-        return '<span class="acciones-bt__icon acciones-bt__icon--image" aria-hidden="true"><img class="acciones-bt__icon-image" src="' . esc_url($icon_value) . '" alt=""></span>';
+        return '<span class="' . esc_attr($base_class) . ' ' . esc_attr($base_class) . '--image" aria-hidden="true"><img class="' . esc_attr($base_class) . '-image" src="' . esc_url($icon_value) . '" alt=""></span>';
     }
 
     $icon_classes = preg_replace('/[^A-Za-z0-9_\\-\\s]/', '', $icon_value);
@@ -3806,8 +4868,29 @@ function sitio_cero_get_menu_item_icon_markup($menu_item_id)
         return '';
     }
 
-    return '<span class="acciones-bt__icon ' . esc_attr($icon_classes) . '" aria-hidden="true"></span>';
+    return '<span class="' . esc_attr($base_class) . ' ' . esc_attr($icon_classes) . '" aria-hidden="true"></span>';
 }
+
+function sitio_cero_primary_menu_item_title_with_icon($title, $menu_item, $args, $depth)
+{
+    if (!$menu_item instanceof WP_Post || !is_object($args)) {
+        return $title;
+    }
+
+    if (!isset($args->theme_location) || 'primary' !== (string) $args->theme_location || $depth <= 0) {
+        return $title;
+    }
+
+    $icon_markup = sitio_cero_get_menu_item_icon_markup($menu_item->ID, 'site-nav__item-icon');
+    $label_markup = '<span class="site-nav__item-label">' . $title . '</span>';
+
+    if ('' === $icon_markup) {
+        return $label_markup;
+    }
+
+    return $icon_markup . $label_markup;
+}
+add_filter('nav_menu_item_title', 'sitio_cero_primary_menu_item_title_with_icon', 10, 4);
 
 function sitio_cero_get_google_menu_icon_options()
 {

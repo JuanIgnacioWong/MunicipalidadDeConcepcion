@@ -32,8 +32,32 @@ get_header();
                         <?php endif; ?>
                     </a>
                     <div class="news-card__body">
-                        <?php if ('noticia' === get_post_type()) : ?>
+                        <?php
+                        $current_post_type = get_post_type();
+                        $is_noticia = 'noticia' === $current_post_type;
+                        $is_evento = 'evento_municipal' === $current_post_type;
+                        ?>
+                        <?php if ($is_noticia) : ?>
                             <p class="news-card__meta"><?php echo esc_html(get_the_date('d M Y')); ?></p>
+                        <?php elseif ($is_evento) : ?>
+                            <?php
+                            $event_date = function_exists('sitio_cero_get_evento_full_fecha')
+                                ? sitio_cero_get_evento_full_fecha(get_the_ID())
+                                : get_the_date('d M Y');
+                            if (!is_string($event_date)) {
+                                $event_date = '';
+                            }
+                            $event_place = get_post_meta(get_the_ID(), 'sitio_cero_evento_lugar', true);
+                            if (!is_string($event_place)) {
+                                $event_place = '';
+                            }
+                            ?>
+                            <?php if ('' !== trim($event_date)) : ?>
+                                <p class="news-card__meta"><?php echo esc_html($event_date); ?></p>
+                            <?php endif; ?>
+                            <?php if ('' !== trim($event_place)) : ?>
+                                <p class="news-card__meta"><?php echo esc_html($event_place); ?></p>
+                            <?php endif; ?>
                         <?php endif; ?>
                         <h2 class="news-card__title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
                         <p><?php echo esc_html(wp_trim_words(get_the_excerpt(), 20)); ?></p>

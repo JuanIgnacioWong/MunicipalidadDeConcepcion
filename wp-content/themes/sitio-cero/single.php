@@ -7,12 +7,18 @@ get_header();
         <?php
         $is_noticia = 'noticia' === get_post_type();
         $is_aviso = 'aviso' === get_post_type();
+        $is_evento = 'evento_municipal' === get_post_type();
         $has_media = has_post_thumbnail();
         $gallery_items = array();
         $aviso_image_url = '';
         $aviso_parrafos = '';
         $aviso_documentos = array();
         $aviso_archivos = array();
+        $evento_fecha = '';
+        $evento_hora = '';
+        $evento_lugar = '';
+        $evento_mapa_url = '';
+        $evento_mapa_embed_url = '';
 
         if ($is_noticia && function_exists('sitio_cero_get_noticia_gallery_ids')) {
             $gallery_ids = sitio_cero_get_noticia_gallery_ids(get_the_ID());
@@ -67,12 +73,59 @@ get_header();
                 $aviso_archivos = sitio_cero_get_aviso_links(get_the_ID(), 'sitio_cero_aviso_archivos');
             }
         }
+
+        if ($is_evento) {
+            $evento_fecha = function_exists('sitio_cero_get_evento_full_fecha')
+                ? sitio_cero_get_evento_full_fecha(get_the_ID())
+                : get_the_date('d M Y');
+            $evento_hora = function_exists('sitio_cero_get_evento_hora')
+                ? sitio_cero_get_evento_hora(get_the_ID())
+                : '';
+            $evento_lugar = get_post_meta(get_the_ID(), 'sitio_cero_evento_lugar', true);
+            $evento_mapa_url = get_post_meta(get_the_ID(), 'sitio_cero_evento_mapa_url', true);
+
+            if (!is_string($evento_fecha)) {
+                $evento_fecha = '';
+            }
+            if (!is_string($evento_hora)) {
+                $evento_hora = '';
+            }
+            if (!is_string($evento_lugar)) {
+                $evento_lugar = '';
+            }
+            if (!is_string($evento_mapa_url)) {
+                $evento_mapa_url = '';
+            }
+
+            if (function_exists('sitio_cero_get_evento_mapa_embed_url')) {
+                $evento_mapa_embed_url = sitio_cero_get_evento_mapa_embed_url($evento_mapa_url, $evento_lugar);
+            } else {
+                $evento_mapa_embed_url = '';
+            }
+
+            if (!is_string($evento_mapa_embed_url)) {
+                $evento_mapa_embed_url = '';
+            }
+        }
         ?>
         <article <?php post_class(); ?>>
             <header class="section__header">
                 <h1><?php the_title(); ?></h1>
                 <?php if ($is_noticia) : ?>
                     <p class="meta"><?php echo esc_html(get_the_date()); ?></p>
+                <?php elseif ($is_evento) : ?>
+                    <?php if ('' !== trim($evento_fecha)) : ?>
+                        <p class="meta"><strong><?php esc_html_e('Fecha:', 'sitio-cero'); ?></strong> <?php echo esc_html($evento_fecha); ?></p>
+                    <?php endif; ?>
+                    <?php if ('' !== trim($evento_hora)) : ?>
+                        <p class="meta"><strong><?php esc_html_e('Hora:', 'sitio-cero'); ?></strong> <?php echo esc_html($evento_hora); ?> hrs</p>
+                    <?php endif; ?>
+                    <?php if ('' !== trim($evento_lugar)) : ?>
+                        <p class="meta"><strong><?php esc_html_e('Lugar:', 'sitio-cero'); ?></strong> <?php echo esc_html($evento_lugar); ?></p>
+                    <?php endif; ?>
+                    <?php if ('' !== trim($evento_mapa_url)) : ?>
+                        <p class="meta"><a href="<?php echo esc_url($evento_mapa_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Ver en Google Maps', 'sitio-cero'); ?></a></p>
+                    <?php endif; ?>
                 <?php endif; ?>
             </header>
 
@@ -245,6 +298,26 @@ get_header();
                         <?php endif; ?>
                     </aside>
                 </div>
+            <?php elseif ($is_evento) : ?>
+                <div class="content-body evento-single__content">
+                    <?php the_content(); ?>
+                </div>
+
+                <?php if ('' !== trim($evento_mapa_embed_url)) : ?>
+                    <section class="evento-single-map">
+                        <h2><?php esc_html_e('Ubicacion del evento', 'sitio-cero'); ?></h2>
+                        <div class="evento-single-map__frame-wrap">
+                            <iframe
+                                class="evento-single-map__frame"
+                                src="<?php echo esc_url($evento_mapa_embed_url); ?>"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                allowfullscreen
+                                title="<?php echo esc_attr(sprintf(__('Mapa de %s', 'sitio-cero'), get_the_title())); ?>"
+                            ></iframe>
+                        </div>
+                    </section>
+                <?php endif; ?>
             <?php else : ?>
                 <div class="content-body">
                     <?php the_content(); ?>
