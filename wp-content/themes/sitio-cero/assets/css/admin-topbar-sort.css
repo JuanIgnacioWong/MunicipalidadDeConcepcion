@@ -1,0 +1,43 @@
+.wp-list-table .sitio-cero-sort-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    color: #646970;
+    cursor: move;
+    vertical-align: text-bottom;
+}
+
+.wp-list-table .sitio-cero-sort-handle:hover {
+    color: #1d2327;
+}
+
+.wp-list-table tr.type-topbar_item.ui-sortable-helper {
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.wp-list-table tr.sitio-cero-sort-placeholder td {
+    height: 48px;
+    border: 2px dashed #72aee6;
+    background: #f0f6fc;
+}
+
+.sitio-cero-sort-status {
+    margin: 10px 0 0;
+    font-size: 13px;
+}
+
+.sitio-cero-sort-status.is-saving {
+    color: #50575e;
+}
+
+.sitio-cero-sort-status.is-success {
+    color: #007017;
+}
+
+.sitio-cero-sort-status.is-error {
+    color: #b32d2e;
+}

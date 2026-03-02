@@ -11,9 +11,95 @@
 
 <header class="site-topbar">
     <div class="container topbar__inner">
-        <p class="topbar__item"><strong>Fono central:</strong> +56 2 3386 8000</p>
-        <p class="topbar__item"><strong>Emergencias:</strong> 1414</p>
-        <a class="topbar__link" href="<?php echo esc_url(home_url('/#canales')); ?>">Canales de atencion</a>
+        <?php
+        $topbar_items = function_exists('sitio_cero_get_topbar_items') ? sitio_cero_get_topbar_items() : array();
+        $topbar_left_items = array();
+        $topbar_right_items = array();
+
+        if (!empty($topbar_items)) {
+            foreach ($topbar_items as $topbar_item) {
+                if (!is_array($topbar_item)) {
+                    continue;
+                }
+
+                $item_type = isset($topbar_item['type']) ? (string) $topbar_item['type'] : 'info';
+                if ('info' === $item_type) {
+                    $topbar_left_items[] = $topbar_item;
+                    continue;
+                }
+
+                $topbar_right_items[] = $topbar_item;
+            }
+        }
+        ?>
+
+        <?php if (empty($topbar_items)) : ?>
+            <p class="topbar__item"><strong>Fono central:</strong> +56 2 3386 8000</p>
+            <p class="topbar__item"><strong>Emergencias:</strong> 1414</p>
+            <div class="topbar__right">
+                <a class="topbar__cta topbar__cta--sai" href="https://www.portaltransparencia.cl/PortalPdT/ingreso-sai-v2" target="_blank" rel="noopener noreferrer">
+                    <span class="material-symbols-rounded topbar__cta-icon" aria-hidden="true">info</span>
+                    <span class="topbar__cta-text">
+                        <span><?php esc_html_e('Solicitud de informacion', 'sitio-cero'); ?></span>
+                        <span class="topbar__cta-sub"><?php esc_html_e('Ley de Transparencia', 'sitio-cero'); ?></span>
+                    </span>
+                </a>
+                <a class="topbar__cta topbar__cta--ta" href="https://www.portaltransparencia.cl/PortalPdT/directorio-de-organismos-regulados" target="_blank" rel="noopener noreferrer">
+                    <span class="material-symbols-rounded topbar__cta-icon" aria-hidden="true">folder_open</span>
+                    <span class="topbar__cta-text">
+                        <span><?php esc_html_e('Transparencia activa', 'sitio-cero'); ?></span>
+                        <span class="topbar__cta-sub"><?php esc_html_e('Ley de Transparencia', 'sitio-cero'); ?></span>
+                    </span>
+                </a>
+                <a class="topbar__link" href="<?php echo esc_url(home_url('/#canales')); ?>">Canales de atencion</a>
+            </div>
+        <?php else : ?>
+            <?php foreach ($topbar_left_items as $topbar_item) : ?>
+                <?php
+                $item_title = isset($topbar_item['title']) ? (string) $topbar_item['title'] : '';
+                $item_subtitle = isset($topbar_item['subtitle']) ? (string) $topbar_item['subtitle'] : '';
+                ?>
+                <p class="topbar__item">
+                    <?php if ('' !== trim($item_title)) : ?><strong><?php echo esc_html($item_title); ?>:</strong><?php endif; ?>
+                    <?php if ('' !== trim($item_subtitle)) : ?> <?php echo esc_html($item_subtitle); ?><?php endif; ?>
+                </p>
+            <?php endforeach; ?>
+
+            <?php if (!empty($topbar_right_items)) : ?>
+                <div class="topbar__right">
+                    <?php foreach ($topbar_right_items as $topbar_item) : ?>
+                        <?php
+                        $item_type = isset($topbar_item['type']) ? (string) $topbar_item['type'] : 'link';
+                        $item_title = isset($topbar_item['title']) ? (string) $topbar_item['title'] : '';
+                        $item_subtitle = isset($topbar_item['subtitle']) ? (string) $topbar_item['subtitle'] : '';
+                        $item_url = isset($topbar_item['url']) ? (string) $topbar_item['url'] : '';
+                        if ('' === trim($item_url)) {
+                            $item_url = '#';
+                        }
+                        $item_icon = isset($topbar_item['icon']) ? (string) $topbar_item['icon'] : '';
+                        $item_target_blank = !empty($topbar_item['target_blank']);
+                        $item_target_attr = $item_target_blank ? ' target="_blank" rel="noopener noreferrer"' : '';
+                        ?>
+
+                        <?php if ('cta' === $item_type) : ?>
+                            <a class="topbar__cta" href="<?php echo esc_url($item_url); ?>"<?php echo $item_target_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+                                <?php if ('' !== trim($item_icon)) : ?>
+                                    <span class="material-symbols-rounded topbar__cta-icon" aria-hidden="true"><?php echo esc_html($item_icon); ?></span>
+                                <?php endif; ?>
+                                <span class="topbar__cta-text">
+                                    <span><?php echo esc_html($item_title); ?></span>
+                                    <?php if ('' !== trim($item_subtitle)) : ?>
+                                        <span class="topbar__cta-sub"><?php echo esc_html($item_subtitle); ?></span>
+                                    <?php endif; ?>
+                                </span>
+                            </a>
+                        <?php else : ?>
+                            <a class="topbar__link" href="<?php echo esc_url($item_url); ?>"<?php echo $item_target_attr; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html($item_title); ?></a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
     </div>
 </header>
 

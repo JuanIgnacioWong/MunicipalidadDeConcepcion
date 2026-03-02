@@ -63,6 +63,411 @@ function sitio_cero_assets()
 }
 add_action('wp_enqueue_scripts', 'sitio_cero_assets');
 
+function sitio_cero_register_topbar_item_post_type()
+{
+    $labels = array(
+        'name'               => __('Topbar', 'sitio-cero'),
+        'singular_name'      => __('Item Topbar', 'sitio-cero'),
+        'menu_name'          => __('Topbar', 'sitio-cero'),
+        'name_admin_bar'     => __('Item Topbar', 'sitio-cero'),
+        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
+        'add_new_item'       => __('Agregar item Topbar', 'sitio-cero'),
+        'new_item'           => __('Nuevo item Topbar', 'sitio-cero'),
+        'edit_item'          => __('Editar item Topbar', 'sitio-cero'),
+        'view_item'          => __('Ver item Topbar', 'sitio-cero'),
+        'all_items'          => __('Todos los items Topbar', 'sitio-cero'),
+        'search_items'       => __('Buscar items Topbar', 'sitio-cero'),
+        'not_found'          => __('No se encontraron items.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay items en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'topbar_item',
+        array(
+            'labels'             => $labels,
+            'public'             => false,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'show_in_admin_bar'  => true,
+            'show_in_nav_menus'  => false,
+            'show_in_rest'       => true,
+            'exclude_from_search'=> true,
+            'publicly_queryable' => false,
+            'has_archive'        => false,
+            'rewrite'            => false,
+            'hierarchical'       => true,
+            'menu_position'      => 21,
+            'menu_icon'          => 'dashicons-editor-ul',
+            'supports'           => array('title', 'page-attributes'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_topbar_item_post_type');
+
+function sitio_cero_add_topbar_item_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_topbar_item_details',
+        __('Configuracion del item', 'sitio-cero'),
+        'sitio_cero_render_topbar_item_metabox',
+        'topbar_item',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_topbar_item_metaboxes');
+
+function sitio_cero_render_topbar_item_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_topbar_item_meta', 'sitio_cero_topbar_item_meta_nonce');
+
+    $type = get_post_meta($post->ID, 'sitio_cero_topbar_item_type', true);
+    $subtitle = get_post_meta($post->ID, 'sitio_cero_topbar_item_subtitle', true);
+    $url = get_post_meta($post->ID, 'sitio_cero_topbar_item_url', true);
+    $icon = get_post_meta($post->ID, 'sitio_cero_topbar_item_icon', true);
+    $target_blank = get_post_meta($post->ID, 'sitio_cero_topbar_item_target_blank', true);
+
+    if (!is_string($type) || '' === trim($type)) {
+        $type = 'info';
+    }
+    if (!is_string($subtitle)) {
+        $subtitle = '';
+    }
+    if (!is_string($url)) {
+        $url = '';
+    }
+    if (!is_string($icon)) {
+        $icon = '';
+    }
+
+    ?>
+    <p>
+        <label for="sitio_cero_topbar_item_type"><strong><?php esc_html_e('Tipo de item', 'sitio-cero'); ?></strong></label><br>
+        <select id="sitio_cero_topbar_item_type" name="sitio_cero_topbar_item_type">
+            <option value="info" <?php selected($type, 'info'); ?>><?php esc_html_e('Informacion', 'sitio-cero'); ?></option>
+            <option value="cta" <?php selected($type, 'cta'); ?>><?php esc_html_e('Boton destacado', 'sitio-cero'); ?></option>
+            <option value="link" <?php selected($type, 'link'); ?>><?php esc_html_e('Link simple', 'sitio-cero'); ?></option>
+        </select>
+    </p>
+    <p>
+        <label for="sitio_cero_topbar_item_subtitle"><strong><?php esc_html_e('Subtitulo / valor', 'sitio-cero'); ?></strong></label><br>
+        <input type="text" class="widefat" id="sitio_cero_topbar_item_subtitle" name="sitio_cero_topbar_item_subtitle" value="<?php echo esc_attr($subtitle); ?>" placeholder="<?php esc_attr_e('Ejemplo: Ley de Transparencia', 'sitio-cero'); ?>">
+    </p>
+    <p>
+        <label for="sitio_cero_topbar_item_url"><strong><?php esc_html_e('URL (opcional)', 'sitio-cero'); ?></strong></label><br>
+        <input type="url" class="widefat" id="sitio_cero_topbar_item_url" name="sitio_cero_topbar_item_url" value="<?php echo esc_attr($url); ?>" placeholder="https://">
+    </p>
+    <p>
+        <label for="sitio_cero_topbar_item_icon"><strong><?php esc_html_e('Icono Material Symbols (opcional)', 'sitio-cero'); ?></strong></label><br>
+        <input type="text" class="widefat" id="sitio_cero_topbar_item_icon" name="sitio_cero_topbar_item_icon" value="<?php echo esc_attr($icon); ?>" placeholder="<?php esc_attr_e('Ejemplo: info', 'sitio-cero'); ?>">
+    </p>
+    <p>
+        <label>
+            <input type="checkbox" name="sitio_cero_topbar_item_target_blank" value="1" <?php checked('1', (string) $target_blank); ?>>
+            <?php esc_html_e('Abrir enlace en nueva pestaña', 'sitio-cero'); ?>
+        </label>
+    </p>
+    <p><em><?php esc_html_e('Ordena los items con "Atributos de pagina > Orden" para simular un menu.', 'sitio-cero'); ?></em></p>
+    <?php
+}
+
+function sitio_cero_save_topbar_item_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_topbar_item_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_topbar_item_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_topbar_item_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $allowed_types = array('info', 'cta', 'link');
+    $type = isset($_POST['sitio_cero_topbar_item_type']) ? sanitize_key(wp_unslash($_POST['sitio_cero_topbar_item_type'])) : 'info';
+    if (!in_array($type, $allowed_types, true)) {
+        $type = 'info';
+    }
+    update_post_meta($post_id, 'sitio_cero_topbar_item_type', $type);
+
+    $subtitle = isset($_POST['sitio_cero_topbar_item_subtitle']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_topbar_item_subtitle'])) : '';
+    update_post_meta($post_id, 'sitio_cero_topbar_item_subtitle', $subtitle);
+
+    $url = isset($_POST['sitio_cero_topbar_item_url']) ? esc_url_raw(wp_unslash($_POST['sitio_cero_topbar_item_url'])) : '';
+    update_post_meta($post_id, 'sitio_cero_topbar_item_url', $url);
+
+    $icon = isset($_POST['sitio_cero_topbar_item_icon']) ? sanitize_key(wp_unslash($_POST['sitio_cero_topbar_item_icon'])) : '';
+    update_post_meta($post_id, 'sitio_cero_topbar_item_icon', $icon);
+
+    $target_blank = isset($_POST['sitio_cero_topbar_item_target_blank']) ? '1' : '0';
+    update_post_meta($post_id, 'sitio_cero_topbar_item_target_blank', $target_blank);
+}
+add_action('save_post_topbar_item', 'sitio_cero_save_topbar_item_meta');
+
+function sitio_cero_get_topbar_items()
+{
+    $items = array();
+
+    $posts = get_posts(
+        array(
+            'post_type'      => 'topbar_item',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => array(
+                'menu_order' => 'ASC',
+                'date'       => 'ASC',
+                'ID'         => 'ASC',
+            ),
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!is_array($posts) || empty($posts)) {
+        return $items;
+    }
+
+    foreach ($posts as $post) {
+        if (!$post instanceof WP_Post) {
+            continue;
+        }
+
+        $type = get_post_meta($post->ID, 'sitio_cero_topbar_item_type', true);
+        $subtitle = get_post_meta($post->ID, 'sitio_cero_topbar_item_subtitle', true);
+        $url = get_post_meta($post->ID, 'sitio_cero_topbar_item_url', true);
+        $icon = get_post_meta($post->ID, 'sitio_cero_topbar_item_icon', true);
+        $target_blank = get_post_meta($post->ID, 'sitio_cero_topbar_item_target_blank', true);
+
+        $type = is_string($type) ? sanitize_key($type) : 'info';
+        if (!in_array($type, array('info', 'cta', 'link'), true)) {
+            $type = 'info';
+        }
+
+        $items[] = array(
+            'type'         => $type,
+            'title'        => sanitize_text_field((string) $post->post_title),
+            'subtitle'     => is_string($subtitle) ? sanitize_text_field($subtitle) : '',
+            'url'          => is_string($url) ? esc_url($url) : '',
+            'icon'         => is_string($icon) ? sanitize_key($icon) : '',
+            'target_blank' => '1' === (string) $target_blank,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_seed_default_topbar_items()
+{
+    if (!post_type_exists('topbar_item')) {
+        return;
+    }
+
+    $seed_version = '1';
+    $seed_option = 'sitio_cero_topbar_items_seeded_version';
+    if ((string) get_option($seed_option, '') === $seed_version) {
+        return;
+    }
+
+    $existing = get_posts(
+        array(
+            'post_type'      => 'topbar_item',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+    if (!empty($existing)) {
+        update_option($seed_option, $seed_version);
+        return;
+    }
+
+    $defaults = array(
+        array(
+            'title'    => __('Fono central', 'sitio-cero'),
+            'subtitle' => '+56 2 3386 8000',
+            'type'     => 'info',
+        ),
+        array(
+            'title'    => __('Emergencias', 'sitio-cero'),
+            'subtitle' => '1414',
+            'type'     => 'info',
+        ),
+        array(
+            'title'        => __('Solicitud de informacion', 'sitio-cero'),
+            'subtitle'     => __('Ley de Transparencia', 'sitio-cero'),
+            'type'         => 'cta',
+            'url'          => 'https://www.portaltransparencia.cl/PortalPdT/ingreso-sai-v2',
+            'icon'         => 'info',
+            'target_blank' => '1',
+        ),
+        array(
+            'title'        => __('Transparencia activa', 'sitio-cero'),
+            'subtitle'     => __('Ley de Transparencia', 'sitio-cero'),
+            'type'         => 'cta',
+            'url'          => 'https://www.portaltransparencia.cl/PortalPdT/directorio-de-organismos-regulados',
+            'icon'         => 'folder_open',
+            'target_blank' => '1',
+        ),
+        array(
+            'title'    => __('Canales de atencion', 'sitio-cero'),
+            'type'     => 'link',
+            'url'      => home_url('/#canales'),
+        ),
+    );
+
+    foreach ($defaults as $index => $item) {
+        $post_id = wp_insert_post(
+            array(
+                'post_type'   => 'topbar_item',
+                'post_status' => 'publish',
+                'post_title'  => isset($item['title']) ? sanitize_text_field((string) $item['title']) : '',
+                'menu_order'  => (int) $index,
+            ),
+            true
+        );
+
+        if (is_wp_error($post_id) || !$post_id) {
+            continue;
+        }
+
+        update_post_meta($post_id, 'sitio_cero_topbar_item_type', isset($item['type']) ? sanitize_key((string) $item['type']) : 'info');
+        update_post_meta($post_id, 'sitio_cero_topbar_item_subtitle', isset($item['subtitle']) ? sanitize_text_field((string) $item['subtitle']) : '');
+        update_post_meta($post_id, 'sitio_cero_topbar_item_url', isset($item['url']) ? esc_url_raw((string) $item['url']) : '');
+        update_post_meta($post_id, 'sitio_cero_topbar_item_icon', isset($item['icon']) ? sanitize_key((string) $item['icon']) : '');
+        update_post_meta($post_id, 'sitio_cero_topbar_item_target_blank', isset($item['target_blank']) ? '1' : '0');
+    }
+
+    update_option($seed_option, $seed_version);
+}
+add_action('init', 'sitio_cero_seed_default_topbar_items', 46);
+
+function sitio_cero_enqueue_topbar_sort_admin_assets($hook_suffix)
+{
+    if ('edit.php' !== $hook_suffix) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || 'topbar_item' !== $screen->post_type) {
+        return;
+    }
+
+    $version = wp_get_theme()->get('Version');
+
+    wp_enqueue_style(
+        'sitio-cero-admin-topbar-sort',
+        get_template_directory_uri() . '/assets/css/admin-topbar-sort.css',
+        array(),
+        $version
+    );
+
+    wp_enqueue_script(
+        'sitio-cero-admin-topbar-sort',
+        get_template_directory_uri() . '/assets/js/admin-topbar-sort.js',
+        array('jquery', 'jquery-ui-sortable'),
+        $version,
+        true
+    );
+
+    wp_localize_script(
+        'sitio-cero-admin-topbar-sort',
+        'sitioCeroTopbarSort',
+        array(
+            'ajaxUrl'    => admin_url('admin-ajax.php'),
+            'nonce'      => wp_create_nonce('sitio_cero_topbar_sort'),
+            'savingText' => __('Guardando orden...', 'sitio-cero'),
+            'savedText'  => __('Orden guardado.', 'sitio-cero'),
+            'errorText'  => __('No fue posible guardar el orden.', 'sitio-cero'),
+        )
+    );
+}
+add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_topbar_sort_admin_assets');
+
+function sitio_cero_order_topbar_admin_list($query)
+{
+    if (!is_admin() || !$query instanceof WP_Query || !$query->is_main_query()) {
+        return;
+    }
+
+    global $pagenow;
+    if ('edit.php' !== $pagenow) {
+        return;
+    }
+
+    $post_type = $query->get('post_type');
+    if ('topbar_item' !== $post_type) {
+        return;
+    }
+
+    if ((string) $query->get('orderby') !== '') {
+        return;
+    }
+
+    $query->set('orderby', 'menu_order title');
+    $query->set('order', 'ASC');
+}
+add_action('pre_get_posts', 'sitio_cero_order_topbar_admin_list');
+
+function sitio_cero_ajax_sort_topbar_items()
+{
+    check_ajax_referer('sitio_cero_topbar_sort', 'nonce');
+
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error(
+            array('message' => __('Permisos insuficientes.', 'sitio-cero')),
+            403
+        );
+    }
+
+    $raw_order = isset($_POST['order']) ? wp_unslash($_POST['order']) : array();
+    if (!is_array($raw_order)) {
+        wp_send_json_error(
+            array('message' => __('Orden invalido.', 'sitio-cero')),
+            400
+        );
+    }
+
+    $order = array_values(array_filter(array_map('absint', $raw_order)));
+    if (empty($order)) {
+        wp_send_json_error(
+            array('message' => __('No se recibieron items.', 'sitio-cero')),
+            400
+        );
+    }
+
+    $position = 0;
+    foreach ($order as $post_id) {
+        if ('topbar_item' !== get_post_type($post_id)) {
+            continue;
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            continue;
+        }
+
+        wp_update_post(
+            array(
+                'ID'         => $post_id,
+                'menu_order' => $position,
+            )
+        );
+        $position++;
+    }
+
+    wp_send_json_success(
+        array(
+            'updated' => $position,
+        )
+    );
+}
+add_action('wp_ajax_sitio_cero_sort_topbar_items', 'sitio_cero_ajax_sort_topbar_items');
+
 function sitio_cero_enqueue_direccion_custom_css()
 {
     if (!is_singular('direccion_municipal')) {
