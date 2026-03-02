@@ -63,6 +63,39 @@ function sitio_cero_assets()
 }
 add_action('wp_enqueue_scripts', 'sitio_cero_assets');
 
+function sitio_cero_enqueue_direccion_custom_css()
+{
+    if (!is_singular('direccion_municipal')) {
+        return;
+    }
+
+    $post_id = get_queried_object_id();
+    if ($post_id <= 0) {
+        return;
+    }
+
+    $custom_css = get_post_meta($post_id, 'sitio_cero_direccion_custom_css', true);
+    if (!is_string($custom_css) || '' === trim($custom_css)) {
+        return;
+    }
+
+    $clean_css = function_exists('sitio_cero_sanitize_tramite_custom_css')
+        ? sitio_cero_sanitize_tramite_custom_css($custom_css)
+        : trim((string) wp_kses((string) $custom_css, array()));
+
+    if ('' === $clean_css) {
+        return;
+    }
+
+    $selector = '#direccion-municipal-' . $post_id;
+    $custom_css_output = false !== strpos($clean_css, '{{selector}}')
+        ? str_replace('{{selector}}', $selector, $clean_css)
+        : $selector . ' { ' . $clean_css . ' }';
+
+    wp_add_inline_style('sitio-cero-main', $custom_css_output);
+}
+add_action('wp_enqueue_scripts', 'sitio_cero_enqueue_direccion_custom_css', 20);
+
 function sitio_cero_get_material_symbols_stylesheet_url()
 {
     return 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0';

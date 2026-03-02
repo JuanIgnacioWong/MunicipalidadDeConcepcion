@@ -59,6 +59,53 @@
             ?>
         </nav>
 
-        <a class="header-cta" href="<?php echo esc_url(home_url('/#tramites')); ?>">Tramites en linea</a>
+        <div
+            class="site-header-edge-tools"
+            data-header-search
+            data-search-endpoint="<?php echo esc_url(rest_url('wp/v2/search')); ?>"
+            data-search-types="post,page,noticia,aviso,direccion_municipal,evento_municipal"
+        >
+            <div class="site-header-search-shell" data-header-search-shell>
+                <button
+                    class="site-header-search-btn"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="site-header-search-panel"
+                    aria-label="<?php esc_attr_e('Abrir buscador', 'sitio-cero'); ?>"
+                    data-header-search-trigger
+                >
+                    <span class="material-symbols-rounded site-header-search-btn__icon" aria-hidden="true">search</span>
+                    <span class="site-header-search-btn__label"><?php esc_html_e('Buscar', 'sitio-cero'); ?></span>
+                </button>
+
+                <div class="site-header-search-panel" id="site-header-search-panel" aria-hidden="true" data-header-search-panel>
+                    <form class="site-header-search-form" action="<?php echo esc_url(home_url('/')); ?>" method="get" data-header-search-form>
+                        <label class="site-header-search-form__label" for="site-header-search-input"><?php esc_html_e('Buscar en el sitio', 'sitio-cero'); ?></label>
+                        <div class="site-header-search-form__row">
+                            <input
+                                id="site-header-search-input"
+                                class="site-header-search-form__input"
+                                type="search"
+                                name="s"
+                                autocomplete="off"
+                                placeholder="<?php esc_attr_e('Buscar noticias, direcciones, avisos...', 'sitio-cero'); ?>"
+                                data-header-search-input
+                            >
+                            <input type="hidden" name="mostrar_google" value="1">
+                            <button class="site-header-search-form__submit" type="submit"><?php esc_html_e('Buscar', 'sitio-cero'); ?></button>
+                        </div>
+                    </form>
+
+                    <div class="site-header-search-suggest">
+                        <p class="site-header-search-suggest__title"><?php esc_html_e('Busquedas recomendadas', 'sitio-cero'); ?></p>
+                        <ul class="site-header-search-suggest__list" data-header-search-suggestions></ul>
+                    </div>
+                </div>
+            </div>
+            <a class="site-header-edge-btn" href="tel:*4110">
+                <span class="site-header-edge-btn__phone">*4110</span>
+                <span class="site-header-edge-btn__text"><?php esc_html_e('Emergencias', 'sitio-cero'); ?></span>
+            </a>
+        </div>
     </div>
 </header>

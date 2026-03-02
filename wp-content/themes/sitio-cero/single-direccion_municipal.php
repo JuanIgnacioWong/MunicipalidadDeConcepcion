@@ -14,7 +14,6 @@ get_header();
         $direccion = get_post_meta($post_id, 'sitio_cero_direccion_direccion', true);
         $mapa_url = get_post_meta($post_id, 'sitio_cero_direccion_mapa_url', true);
         $custom_html = get_post_meta($post_id, 'sitio_cero_direccion_custom_html', true);
-        $custom_css = get_post_meta($post_id, 'sitio_cero_direccion_custom_css', true);
 
         if (!is_string($director)) {
             $director = '';
@@ -36,9 +35,6 @@ get_header();
         }
         if (!is_string($custom_html)) {
             $custom_html = '';
-        }
-        if (!is_string($custom_css)) {
-            $custom_css = '';
         }
 
         $map_src = '';
@@ -154,21 +150,6 @@ get_header();
             $custom_html_output = do_shortcode(wp_kses($custom_html, $allowed_html));
         }
 
-        $custom_css_output = '';
-        if ('' !== trim($custom_css)) {
-            $clean_css = function_exists('sitio_cero_sanitize_tramite_custom_css')
-                ? sitio_cero_sanitize_tramite_custom_css($custom_css)
-                : trim((string) wp_kses((string) $custom_css, array()));
-
-            if ('' !== $clean_css) {
-                $selector = '#direccion-municipal-' . $post_id;
-                if (false !== strpos($clean_css, '{{selector}}')) {
-                    $custom_css_output = str_replace('{{selector}}', $selector, $clean_css);
-                } else {
-                    $custom_css_output = $selector . ' { ' . $clean_css . ' }';
-                }
-            }
-        }
         ?>
 
         <article id="direccion-municipal-<?php the_ID(); ?>" <?php post_class('direccion-municipal-single'); ?>>
@@ -306,10 +287,6 @@ get_header();
                 <section class="direccion-municipal-custom content-body">
                     <?php echo $custom_html_output; ?>
                 </section>
-            <?php endif; ?>
-
-            <?php if ('' !== trim($custom_css_output)) : ?>
-                <style><?php echo esc_html($custom_css_output); ?></style>
             <?php endif; ?>
         </article>
     <?php endwhile; else : ?>

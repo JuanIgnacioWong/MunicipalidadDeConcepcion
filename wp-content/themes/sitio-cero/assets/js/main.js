@@ -9,8 +9,20 @@
 
         const navLinks = Array.from(nav.querySelectorAll('.site-nav__list a[href]'));
         const megaParents = Array.from(nav.querySelectorAll('.site-nav__list > li.menu-item-has-children'));
+        const megaCloseDelayMs = 300;
+        let megaCloseTimer = null;
+
+        const isDesktopViewport = () => window.innerWidth > 860;
+
+        const clearMegaCloseTimer = () => {
+            if (megaCloseTimer) {
+                window.clearTimeout(megaCloseTimer);
+                megaCloseTimer = null;
+            }
+        };
 
         const closeMegaMenus = () => {
+            clearMegaCloseTimer();
             megaParents.forEach((menuItem) => {
                 const triggerLink = menuItem.querySelector(':scope > a[data-mega-trigger="1"]');
                 menuItem.classList.remove('is-mega-open');
@@ -18,6 +30,25 @@
                     triggerLink.setAttribute('aria-expanded', 'false');
                 }
             });
+        };
+
+        const scheduleMegaClose = (menuItem, triggerLink) => {
+            clearMegaCloseTimer();
+
+            megaCloseTimer = window.setTimeout(() => {
+                if (!isDesktopViewport()) {
+                    return;
+                }
+
+                if (menuItem.matches(':hover') || menuItem.matches(':focus-within')) {
+                    return;
+                }
+
+                menuItem.classList.remove('is-mega-open');
+                if (triggerLink) {
+                    triggerLink.setAttribute('aria-expanded', 'false');
+                }
+            }, megaCloseDelayMs);
         };
 
         megaParents.forEach((menuItem) => {
@@ -30,6 +61,43 @@
             triggerLink.setAttribute('data-mega-trigger', '1');
             triggerLink.setAttribute('aria-haspopup', 'true');
             triggerLink.setAttribute('aria-expanded', 'false');
+
+            menuItem.addEventListener('mouseenter', () => {
+                if (!isDesktopViewport()) {
+                    return;
+                }
+
+                clearMegaCloseTimer();
+                closeMegaMenus();
+                menuItem.classList.add('is-mega-open');
+                triggerLink.setAttribute('aria-expanded', 'true');
+            });
+
+            menuItem.addEventListener('mouseleave', () => {
+                if (!isDesktopViewport()) {
+                    return;
+                }
+
+                scheduleMegaClose(menuItem, triggerLink);
+            });
+
+            subMenu.addEventListener('mouseenter', () => {
+                if (!isDesktopViewport()) {
+                    return;
+                }
+
+                clearMegaCloseTimer();
+                menuItem.classList.add('is-mega-open');
+                triggerLink.setAttribute('aria-expanded', 'true');
+            });
+
+            subMenu.addEventListener('mouseleave', () => {
+                if (!isDesktopViewport()) {
+                    return;
+                }
+
+                scheduleMegaClose(menuItem, triggerLink);
+            });
 
             triggerLink.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -748,10 +816,744 @@
         });
     };
 
+    const initHeaderSearch = () => {
+        const searchRoots = document.querySelectorAll('[data-header-search]');
+        if (searchRoots.length === 0) {
+            return;
+        }
+
+        const toAbsoluteUrl = (path) => {
+            const value = String(path || '').trim();
+            if (value === '') {
+                return '';
+            }
+
+            try {
+                return new URL(value, window.location.origin).href;
+            } catch (_error) {
+                return value;
+            }
+        };
+
+        const isBlockedWordPressUrl = (url) => {
+            const absoluteUrl = toAbsoluteUrl(url);
+            if (absoluteUrl === '') {
+                return true;
+            }
+
+            let parsedUrl = null;
+            try {
+                parsedUrl = new URL(absoluteUrl, window.location.origin);
+            } catch (_error) {
+                return true;
+            }
+
+            const normalizedPath = String(parsedUrl.pathname || '').toLowerCase();
+            const normalizedSearch = String(parsedUrl.search || '').toLowerCase();
+            const blockedPathTokens = ['/wp-admin', '/wp-content', '/wp-includes', '/wp-login.php', '/xmlrpc.php'];
+
+            if (blockedPathTokens.some((token) => normalizedPath.includes(token))) {
+                return true;
+            }
+
+            const blockedQueryTokens = ['wp-admin', 'wp-content', 'wp-includes', 'rest_route=/wp/', '/wp-json/wp/'];
+            return blockedQueryTokens.some((token) => normalizedSearch.includes(token));
+        };
+
+        const recommendedEntries = [
+            { label: 'Permiso de circulacion', url: toAbsoluteUrl('/?s=permiso+circulacion') },
+            { label: 'Pago de patentes', url: toAbsoluteUrl('/?s=patentes') },
+            { label: 'Noticias municipales', url: toAbsoluteUrl('/?categoria_noticia=noticias') },
+            { label: 'Categoria noticias', url: toAbsoluteUrl('/?categoria_noticia=noticias') },
+            { label: 'Direcciones municipales', url: toAbsoluteUrl('/?post_type=direccion_municipal') },
+            { label: 'Eventos en Concepcion', url: toAbsoluteUrl('/?post_type=evento_municipal') },
+            { label: 'Avisos municipales', url: toAbsoluteUrl('/?post_type=aviso') },
+            { label: 'Oficina virtual', url: toAbsoluteUrl('/#temas-ciudadanos') },
+            { label: 'Transparencia municipal', url: toAbsoluteUrl('/?s=transparencia') }
+        ];
+        const noticiasCategoryEntry = { label: 'Categoria noticias', url: toAbsoluteUrl('/?categoria_noticia=noticias') };
+
+        const normalizeText = (value) => String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        const blockedSearchTokens = new Set([
+            'wp-admin',
+            'wp-content',
+            'wp-includes',
+            'wp-json',
+            'wp-login',
+            'xmlrpc',
+            'wordpress',
+            'wp'
+        ]);
+
+        const sanitizeQueryForMatching = (value) => normalizeText(value)
+            .split(/\s+/)
+            .map((token) => token.trim().replace(/[^a-z0-9_-]/g, ''))
+            .filter((token) => token !== '' && !blockedSearchTokens.has(token))
+            .join(' ');
+
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        searchRoots.forEach((root) => {
+            const searchShell = root.querySelector('[data-header-search-shell]');
+            const trigger = root.querySelector('[data-header-search-trigger]');
+            const panel = root.querySelector('[data-header-search-panel]');
+            const form = root.querySelector('[data-header-search-form]');
+            const input = root.querySelector('[data-header-search-input]');
+            const suggestionsList = root.querySelector('[data-header-search-suggestions]');
+
+            if (!searchShell || !trigger || !panel || !form || !input || !suggestionsList) {
+                return;
+            }
+
+            const endpoint = String(root.getAttribute('data-search-endpoint') || '').trim();
+            const subtypeRaw = String(root.getAttribute('data-search-types') || '').trim();
+            const subtypes = subtypeRaw === ''
+                ? []
+                : subtypeRaw.split(',').map((value) => value.trim()).filter((value) => value !== '');
+
+            let isOpen = false;
+            let closeTimer = null;
+            let debounceTimer = null;
+            let abortController = null;
+            let activeIndex = -1;
+            let renderedSuggestions = [];
+            const siteLinkEntries = Array.from(document.querySelectorAll('a[href]'))
+                .map((link) => {
+                    if (!(link instanceof HTMLAnchorElement)) {
+                        return null;
+                    }
+
+                    const href = String(link.getAttribute('href') || '').trim();
+                    if (href === '' || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('tel:') || href.startsWith('mailto:')) {
+                        return null;
+                    }
+
+                    let parsedUrl = null;
+                    try {
+                        parsedUrl = new URL(href, window.location.origin);
+                    } catch (_error) {
+                        return null;
+                    }
+
+                    if (parsedUrl.origin !== window.location.origin) {
+                        return null;
+                    }
+
+                    const label = String(link.textContent || '').replace(/\s+/g, ' ').trim();
+                    const normalizedPath = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+                    const absoluteUrl = toAbsoluteUrl(normalizedPath);
+
+                    if (absoluteUrl === '' || isBlockedWordPressUrl(absoluteUrl)) {
+                        return null;
+                    }
+
+                    return {
+                        label: label !== '' ? label : absoluteUrl,
+                        url: absoluteUrl
+                    };
+                })
+                .filter(Boolean);
+
+            const setOpenState = (nextOpenState) => {
+                isOpen = nextOpenState;
+                root.classList.toggle('is-search-open', nextOpenState);
+                trigger.setAttribute('aria-expanded', nextOpenState ? 'true' : 'false');
+                panel.setAttribute('aria-hidden', nextOpenState ? 'false' : 'true');
+            };
+
+            const openSearch = (focusInput = false) => {
+                if (closeTimer) {
+                    window.clearTimeout(closeTimer);
+                    closeTimer = null;
+                }
+                setOpenState(true);
+                if (focusInput) {
+                    window.requestAnimationFrame(() => {
+                        input.focus({ preventScroll: true });
+                    });
+                }
+            };
+
+            const closeSearch = () => {
+                setOpenState(false);
+                activeIndex = -1;
+                suggestionsList
+                    .querySelectorAll('.site-header-search-suggest__btn.is-active')
+                    .forEach((button) => button.classList.remove('is-active'));
+            };
+
+            const scheduleClose = () => {
+                if (closeTimer) {
+                    window.clearTimeout(closeTimer);
+                }
+                closeTimer = window.setTimeout(() => {
+                    closeSearch();
+                }, 220);
+            };
+
+            const toSuggestion = (item) => {
+                if (typeof item === 'string') {
+                    return {
+                        label: item.trim(),
+                        url: ''
+                    };
+                }
+
+                if (!item || typeof item !== 'object') {
+                    return {
+                        label: '',
+                        url: ''
+                    };
+                }
+
+                const rawLabel = typeof item.label === 'string' ? item.label : '';
+                const rawUrl = typeof item.url === 'string' ? item.url : '';
+                const label = rawLabel.trim();
+                const url = rawUrl.trim();
+
+                if (label !== '') {
+                    return { label, url };
+                }
+
+                return {
+                    label: url,
+                    url
+                };
+            };
+
+            const dedupeSuggestions = (items) => {
+                const seen = new Set();
+                const unique = [];
+
+                items.forEach((item) => {
+                    const suggestion = toSuggestion(item);
+                    if (suggestion.label === '') {
+                        return;
+                    }
+
+                    const key = `${normalizeText(suggestion.label)}|${normalizeText(suggestion.url)}`;
+                    if (key === '' || seen.has(key)) {
+                        return;
+                    }
+
+                    seen.add(key);
+                    unique.push(suggestion);
+                });
+
+                return unique;
+            };
+
+            const isSubsequenceMatch = (candidate, query) => {
+                if (query === '') {
+                    return true;
+                }
+
+                let queryIndex = 0;
+                for (let index = 0; index < candidate.length; index += 1) {
+                    if (candidate[index] === query[queryIndex]) {
+                        queryIndex += 1;
+                        if (queryIndex >= query.length) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            };
+
+            const tokenizeQuery = (value) => sanitizeQueryForMatching(value)
+                .split(/\s+/)
+                .map((token) => token.trim())
+                .filter((token) => token !== '');
+
+            const levenshteinDistance = (left, right) => {
+                const leftLength = left.length;
+                const rightLength = right.length;
+
+                if (leftLength === 0) {
+                    return rightLength;
+                }
+                if (rightLength === 0) {
+                    return leftLength;
+                }
+
+                const matrix = Array.from({ length: rightLength + 1 }, () => new Array(leftLength + 1).fill(0));
+                for (let leftIndex = 0; leftIndex <= leftLength; leftIndex += 1) {
+                    matrix[0][leftIndex] = leftIndex;
+                }
+                for (let rightIndex = 0; rightIndex <= rightLength; rightIndex += 1) {
+                    matrix[rightIndex][0] = rightIndex;
+                }
+
+                for (let rightIndex = 1; rightIndex <= rightLength; rightIndex += 1) {
+                    for (let leftIndex = 1; leftIndex <= leftLength; leftIndex += 1) {
+                        const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+                        matrix[rightIndex][leftIndex] = Math.min(
+                            matrix[rightIndex - 1][leftIndex] + 1,
+                            matrix[rightIndex][leftIndex - 1] + 1,
+                            matrix[rightIndex - 1][leftIndex - 1] + substitutionCost
+                        );
+                    }
+                }
+
+                return matrix[rightLength][leftLength];
+            };
+
+            const getSuggestionScore = (candidateText, queryText) => {
+                const candidate = normalizeText(candidateText);
+                const query = sanitizeQueryForMatching(queryText);
+                const queryTokens = tokenizeQuery(query);
+
+                if (candidate === '' || query === '') {
+                    return 0;
+                }
+
+                let score = 0;
+
+                if (candidate === query) {
+                    score += 220;
+                }
+
+                if (candidate.startsWith(query)) {
+                    score += 140;
+                }
+
+                const words = candidate.split(/\s+/).filter((word) => word !== '');
+                if (words.some((word) => word.startsWith(query))) {
+                    score += 120;
+                }
+
+                if (candidate.includes(query)) {
+                    score += 98;
+                }
+
+                if (isSubsequenceMatch(candidate, query)) {
+                    score += 76;
+                }
+
+                if (queryTokens.length > 1) {
+                    let matchedExactTokenCount = 0;
+                    let matchedPartialTokenCount = 0;
+                    let matchedFuzzyTokenCount = 0;
+
+                    queryTokens.forEach((token) => {
+                        if (token === '') {
+                            return;
+                        }
+
+                        if (candidate.includes(token) || words.some((word) => word.startsWith(token))) {
+                            matchedExactTokenCount += 1;
+                            return;
+                        }
+
+                        if (isSubsequenceMatch(candidate, token)) {
+                            matchedPartialTokenCount += 1;
+                            return;
+                        }
+
+                        const compactToken = token.replace(/[^a-z0-9]/g, '');
+                        const compactCandidate = candidate.replace(/[^a-z0-9]/g, '');
+                        if (compactToken === '' || compactCandidate === '') {
+                            return;
+                        }
+
+                        const fuzzyWindow = compactCandidate.length > compactToken.length + 3
+                            ? compactCandidate.slice(0, compactToken.length + 3)
+                            : compactCandidate;
+                        const tokenDistance = levenshteinDistance(fuzzyWindow, compactToken);
+                        const tokenTolerance = compactToken.length <= 4 ? 1 : 2;
+
+                        if (tokenDistance <= tokenTolerance) {
+                            matchedFuzzyTokenCount += 1;
+                        }
+                    });
+
+                    score += (matchedExactTokenCount * 34) + (matchedPartialTokenCount * 18) + (matchedFuzzyTokenCount * 12);
+
+                    if (matchedExactTokenCount === queryTokens.length) {
+                        score += 70;
+                    } else if (matchedExactTokenCount + matchedPartialTokenCount === queryTokens.length) {
+                        score += 48;
+                    } else if (matchedExactTokenCount > 0) {
+                        score += 22;
+                    }
+                }
+
+                const compactCandidate = candidate.replace(/[^a-z0-9]/g, '');
+                const compactQuery = query.replace(/[^a-z0-9]/g, '');
+                if (compactCandidate === '' || compactQuery === '') {
+                    return score;
+                }
+
+                const queryLength = compactQuery.length;
+                const candidateWindow = compactCandidate.length > queryLength + 4
+                    ? compactCandidate.slice(0, queryLength + 4)
+                    : compactCandidate;
+
+                const distance = levenshteinDistance(candidateWindow, compactQuery);
+                const ratio = 1 - (distance / Math.max(candidateWindow.length, compactQuery.length, 1));
+
+                if (queryLength <= 4 && distance <= 2) {
+                    score += 52 + Math.round((ratio + 0.25) * 10);
+                }
+
+                if (ratio >= 0.58) {
+                    score += 48 + Math.round(ratio * 18);
+                }
+
+                return score;
+            };
+
+            const sortSuggestionsBySensitivity = (items, query, limit = 8) => {
+                const normalizedQuery = sanitizeQueryForMatching(query);
+                const source = dedupeSuggestions(items);
+
+                if (normalizedQuery === '') {
+                    return source.slice(0, limit);
+                }
+
+                return source
+                    .map((item, index) => {
+                        const labelScore = getSuggestionScore(item.label, normalizedQuery);
+                        const urlScore = getSuggestionScore(item.url, normalizedQuery);
+                        return {
+                            item,
+                            score: Math.max(labelScore, Math.round(urlScore * 0.95)),
+                            index
+                        };
+                    })
+                    .filter((entry) => entry.score > 0)
+                    .sort((a, b) => {
+                        if (b.score !== a.score) {
+                            return b.score - a.score;
+                        }
+                        if (a.item.label.length !== b.item.label.length) {
+                            return a.item.label.length - b.item.label.length;
+                        }
+                        return a.index - b.index;
+                    })
+                    .map((entry) => entry.item)
+                    .slice(0, limit);
+            };
+
+            const getRecommendedSuggestions = (query) => {
+                const normalizedQuery = sanitizeQueryForMatching(query);
+                if (normalizedQuery === '') {
+                    return recommendedEntries.slice(0, 6);
+                }
+
+                return sortSuggestionsBySensitivity(recommendedEntries, normalizedQuery, 6);
+            };
+
+            const renderSuggestions = (items) => {
+                renderedSuggestions = items;
+                activeIndex = -1;
+
+                if (items.length === 0) {
+                    suggestionsList.innerHTML = '';
+                    return;
+                }
+
+                suggestionsList.innerHTML = items
+                    .map((item, index) => (
+                        `<li class="site-header-search-suggest__item">` +
+                        `<button type="button" class="site-header-search-suggest__btn" data-search-suggestion-index="${index}">` +
+                        `<span class="site-header-search-suggest__label">${escapeHtml(item.label)}</span>` +
+                        `</button>` +
+                        `</li>`
+                    ))
+                    .join('');
+
+                suggestionsList
+                    .querySelectorAll('[data-search-suggestion-index]')
+                    .forEach((button) => {
+                        button.addEventListener('click', () => {
+                            const itemIndex = Number.parseInt(button.getAttribute('data-search-suggestion-index') || '-1', 10);
+                            if (Number.isNaN(itemIndex) || !renderedSuggestions[itemIndex]) {
+                                return;
+                            }
+
+                            const selectedSuggestion = renderedSuggestions[itemIndex];
+                            if (selectedSuggestion.url) {
+                                window.location.assign(selectedSuggestion.url);
+                                return;
+                            }
+
+                            input.value = selectedSuggestion.label;
+                            if (typeof form.requestSubmit === 'function') {
+                                form.requestSubmit();
+                                return;
+                            }
+                            form.submit();
+                        });
+                    });
+            };
+
+            const setActiveSuggestion = (nextIndex) => {
+                const buttons = Array.from(suggestionsList.querySelectorAll('[data-search-suggestion-index]'));
+                if (buttons.length === 0) {
+                    activeIndex = -1;
+                    return;
+                }
+
+                buttons.forEach((button) => button.classList.remove('is-active'));
+
+                if (nextIndex < 0 || nextIndex >= buttons.length) {
+                    activeIndex = -1;
+                    return;
+                }
+
+                activeIndex = nextIndex;
+                const activeButton = buttons[nextIndex];
+                activeButton.classList.add('is-active');
+                activeButton.scrollIntoView({ block: 'nearest' });
+            };
+
+            const fetchSiteSuggestions = async (query) => {
+                const normalizedQuery = sanitizeQueryForMatching(query);
+                if (normalizedQuery.length < 1 || endpoint === '') {
+                    return [];
+                }
+
+                if (abortController) {
+                    abortController.abort();
+                }
+                abortController = new AbortController();
+
+                const buildEntries = (payload) => {
+                    if (!Array.isArray(payload)) {
+                        return [];
+                    }
+
+                    return payload
+                        .map((item) => {
+                            if (!item || typeof item !== 'object') {
+                                return null;
+                            }
+                            const title = typeof item.title === 'string' ? item.title.trim() : '';
+                            const url = typeof item.url === 'string' ? item.url.trim() : '';
+                            if (title === '' && url === '') {
+                                return null;
+                            }
+                            const normalizedUrl = toAbsoluteUrl(url);
+                            if (isBlockedWordPressUrl(normalizedUrl)) {
+                                return null;
+                            }
+                            return {
+                                label: title !== '' ? title : url,
+                                url: normalizedUrl
+                            };
+                        })
+                        .filter(Boolean);
+                };
+
+                const postParams = new URLSearchParams();
+                postParams.set('search', normalizedQuery);
+                postParams.set('per_page', '12');
+                postParams.set('_fields', 'title,url,subtype');
+                subtypes.forEach((subtype) => {
+                    postParams.append('subtype[]', subtype);
+                });
+
+                const requests = [
+                    window.fetch(`${endpoint}?${postParams.toString()}`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        signal: abortController.signal
+                    })
+                ];
+
+                const termParams = new URLSearchParams();
+                termParams.set('type', 'term');
+                termParams.set('search', normalizedQuery);
+                termParams.set('per_page', '8');
+                termParams.set('_fields', 'title,url,subtype');
+                termParams.append('subtype[]', 'categoria_noticia');
+
+                requests.push(
+                    window.fetch(`${endpoint}?${termParams.toString()}`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        signal: abortController.signal
+                    })
+                );
+
+                try {
+                    const settledResponses = await Promise.allSettled(requests);
+                    const responsePayloads = await Promise.all(
+                        settledResponses.map(async (settled) => {
+                            if (settled.status !== 'fulfilled') {
+                                return null;
+                            }
+                            const response = settled.value;
+                            if (!response.ok) {
+                                return null;
+                            }
+
+                            try {
+                                return await response.json();
+                            } catch (_error) {
+                                return null;
+                            }
+                        })
+                    );
+
+                    const mergedEntries = responsePayloads.flatMap((payload) => buildEntries(payload));
+                    return sortSuggestionsBySensitivity(mergedEntries, normalizedQuery, 12);
+                } catch (_error) {
+                    return [];
+                }
+            };
+
+            const updateSuggestions = () => {
+                const query = input.value.trim();
+
+                if (debounceTimer) {
+                    window.clearTimeout(debounceTimer);
+                }
+
+                debounceTimer = window.setTimeout(async () => {
+                    const recommended = getRecommendedSuggestions(query);
+                    const siteSuggestions = await fetchSiteSuggestions(query);
+                    const normalizedQuery = sanitizeQueryForMatching(query);
+                    const mustPrioritizeNoticias = normalizedQuery.includes('noticia');
+                    const merged = sortSuggestionsBySensitivity(
+                        [
+                            ...(mustPrioritizeNoticias ? [noticiasCategoryEntry] : []),
+                            ...recommended,
+                            ...siteSuggestions,
+                            ...siteLinkEntries
+                        ],
+                        query,
+                        10
+                    );
+                    renderSuggestions(merged);
+                }, 70);
+            };
+
+            trigger.addEventListener('mouseenter', () => {
+                openSearch(false);
+                updateSuggestions();
+            });
+
+            searchShell.addEventListener('mouseenter', () => {
+                openSearch(false);
+            });
+
+            searchShell.addEventListener('mouseleave', () => {
+                scheduleClose();
+            });
+
+            searchShell.addEventListener('focusin', () => {
+                openSearch(false);
+            });
+
+            searchShell.addEventListener('focusout', (event) => {
+                const relatedTarget = event.relatedTarget;
+                if (relatedTarget instanceof Node && searchShell.contains(relatedTarget)) {
+                    return;
+                }
+                scheduleClose();
+            });
+
+            trigger.addEventListener('click', () => {
+                if (isOpen) {
+                    closeSearch();
+                    return;
+                }
+                openSearch(true);
+                updateSuggestions();
+            });
+
+            input.addEventListener('focus', () => {
+                openSearch(false);
+                updateSuggestions();
+            });
+
+            input.addEventListener('input', () => {
+                updateSuggestions();
+            });
+
+            input.addEventListener('keydown', (event) => {
+                const buttons = Array.from(suggestionsList.querySelectorAll('[data-search-suggestion-index]'));
+                if (buttons.length === 0) {
+                    return;
+                }
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    const next = activeIndex < buttons.length - 1 ? activeIndex + 1 : 0;
+                    setActiveSuggestion(next);
+                    return;
+                }
+
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    const next = activeIndex > 0 ? activeIndex - 1 : buttons.length - 1;
+                    setActiveSuggestion(next);
+                    return;
+                }
+
+                if (event.key === 'Enter' && activeIndex >= 0 && renderedSuggestions[activeIndex]) {
+                    event.preventDefault();
+                    const selectedSuggestion = renderedSuggestions[activeIndex];
+                    if (selectedSuggestion.url) {
+                        window.location.assign(selectedSuggestion.url);
+                        return;
+                    }
+
+                    input.value = selectedSuggestion.label;
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                        return;
+                    }
+                    form.submit();
+                }
+            });
+
+            form.addEventListener('submit', (event) => {
+                const value = input.value.trim();
+                if (value === '') {
+                    event.preventDefault();
+                    input.focus();
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                const target = event.target;
+                if (target instanceof Node && root.contains(target)) {
+                    return;
+                }
+                closeSearch();
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Escape' || !isOpen) {
+                    return;
+                }
+                closeSearch();
+                trigger.focus({ preventScroll: true });
+            });
+
+            renderSuggestions(getRecommendedSuggestions(''));
+        });
+    };
+
     initNavigation();
     initHeroSliders();
     initAvisosCarousels();
     initNewsGalleries();
     initDireccionAccordions();
     initShortcodeAccordions();
+    initHeaderSearch();
 })();
