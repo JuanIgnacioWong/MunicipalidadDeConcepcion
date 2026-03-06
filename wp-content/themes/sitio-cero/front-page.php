@@ -250,7 +250,7 @@ get_header();
                                     <a class="aviso-card__link" href="<?php the_permalink(); ?>" aria-label="<?php the_title_attribute(); ?>">
                                         <div class="aviso-card__media">
                                             <?php if ('' !== $aviso_image_url) : ?>
-                                                <img class="aviso-card__image" src="<?php echo esc_url($aviso_image_url); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy">
+                                                <img class="aviso-card__image" src="<?php echo esc_url($aviso_image_url); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy" decoding="async" width="833" height="537">
                                             <?php else : ?>
                                                 <span class="aviso-card__image aviso-card__image--placeholder">
                                                     <?php esc_html_e('Sin imagen', 'sitio-cero'); ?>
@@ -277,6 +277,72 @@ get_header();
             <?php else : ?>
                 <div class="empty-state">
                     <p><?php esc_html_e('Aun no hay avisos publicados. Crea avisos desde el menu Avisos del administrador.', 'sitio-cero'); ?></p>
+                </div>
+            <?php endif; ?>
+            <?php wp_reset_postdata(); ?>
+        </div>
+    </section>
+
+    <section id="avisos-grilla" class="section section--paper section--avisos-grid">
+        <div class="container">
+            <?php
+            $avisos_grilla_query = new WP_Query(
+                array(
+                    'post_type'      => 'aviso_grilla',
+                    'post_status'    => 'publish',
+                    'posts_per_page' => 8,
+                    'orderby'        => array(
+                        'menu_order' => 'ASC',
+                        'date'       => 'DESC',
+                    ),
+                )
+            );
+            ?>
+
+            <?php if ($avisos_grilla_query->have_posts()) : ?>
+                <div class="avisos-grid" aria-label="<?php esc_attr_e('Grilla de avisos municipales', 'sitio-cero'); ?>">
+                    <?php while ($avisos_grilla_query->have_posts()) : ?>
+                        <?php
+                        $avisos_grilla_query->the_post();
+                        $grid_image_url = function_exists('sitio_cero_get_aviso_grilla_image_url')
+                            ? sitio_cero_get_aviso_grilla_image_url(get_the_ID(), 'large')
+                            : '';
+                        $grid_hover_image_url = function_exists('sitio_cero_get_aviso_grilla_hover_image_url')
+                            ? sitio_cero_get_aviso_grilla_hover_image_url(get_the_ID())
+                            : '';
+                        $grid_target_url = function_exists('sitio_cero_get_aviso_grilla_target_url')
+                            ? sitio_cero_get_aviso_grilla_target_url(get_the_ID())
+                            : get_permalink();
+
+                        if ('' === $grid_image_url && '' !== $grid_hover_image_url) {
+                            $grid_image_url = $grid_hover_image_url;
+                            $grid_hover_image_url = '';
+                        }
+
+                        if ($grid_hover_image_url === $grid_image_url) {
+                            $grid_hover_image_url = '';
+                        }
+
+                        $grid_card_classes = 'avisos-grid-card';
+                        if ('' !== $grid_hover_image_url) {
+                            $grid_card_classes .= ' has-hover-image';
+                        }
+                        ?>
+                        <article class="<?php echo esc_attr($grid_card_classes); ?>">
+                            <a class="avisos-grid-card__link" href="<?php echo esc_url($grid_target_url); ?>" aria-label="<?php the_title_attribute(); ?>">
+                                <div class="avisos-grid-card__media">
+                                    <?php if ('' !== $grid_image_url) : ?>
+                                        <img class="avisos-grid-card__image" src="<?php echo esc_url($grid_image_url); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy" decoding="async" width="833" height="537">
+                                        <?php if ('' !== $grid_hover_image_url) : ?>
+                                            <img class="avisos-grid-card__image avisos-grid-card__image--hover" src="<?php echo esc_url($grid_hover_image_url); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy" decoding="async" width="833" height="537">
+                                        <?php endif; ?>
+                                    <?php else : ?>
+                                        <span class="avisos-grid-card__placeholder"><?php esc_html_e('Sin imagen', 'sitio-cero'); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </a>
+                        </article>
+                    <?php endwhile; ?>
                 </div>
             <?php endif; ?>
             <?php wp_reset_postdata(); ?>

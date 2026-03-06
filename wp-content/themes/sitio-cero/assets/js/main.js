@@ -58,6 +58,16 @@
                 return;
             }
 
+            const triggerHref = String(triggerLink.getAttribute('href') || '').toLowerCase();
+            const isDireccionesParent = (
+                triggerHref.includes('post_type=direccion_municipal')
+                || triggerHref.includes('/direcciones-municipales')
+            );
+
+            if (isDireccionesParent) {
+                menuItem.classList.add('is-direcciones-parent');
+            }
+
             triggerLink.setAttribute('data-mega-trigger', '1');
             triggerLink.setAttribute('aria-haspopup', 'true');
             triggerLink.setAttribute('aria-expanded', 'false');
@@ -432,9 +442,12 @@
             return;
         }
 
-        let currentPage = 0;
-        let maxPage = 0;
+        let currentIndex = 0;
+        let maxIndex = 0;
         let autoplayTimer = null;
+        let wheelLocked = false;
+        let swipeStartX = 0;
+        let swipeStartY = 0;
 
         const getPerView = () => {
             const rawValue = window.getComputedStyle(carousel).getPropertyValue('--avisos-per-view');
@@ -446,7 +459,7 @@
         };
 
         const updateControls = () => {
-            const isStatic = maxPage <= 0;
+            const isStatic = maxIndex <= 0;
             if (prevButton) {
                 prevButton.disabled = isStatic;
             }
@@ -455,40 +468,66 @@
             }
         };
 
+        const getTrackGap = () => {
+            const styles = window.getComputedStyle(track);
+            const rawGap = styles.columnGap || styles.gap || '0';
+            const gap = Number.parseFloat(rawGap);
+            if (Number.isNaN(gap) || gap < 0) {
+                return 0;
+            }
+            return gap;
+        };
+
+        const getCardStep = () => {
+            if (!cards[0]) {
+                return viewport.clientWidth;
+            }
+            return cards[0].getBoundingClientRect().width + getTrackGap();
+        };
+
         const applyTransform = () => {
-            const x = currentPage * viewport.clientWidth;
+            const step = getCardStep();
+            const x = currentIndex * step;
             track.style.transform = `translateX(-${x}px)`;
         };
 
-        const refresh = () => {
+        const recalculateBounds = () => {
             const perView = getPerView();
-            maxPage = Math.max(Math.ceil(cards.length / perView) - 1, 0);
-            if (currentPage > maxPage) {
-                currentPage = maxPage;
-            }
+            maxIndex = Math.max(cards.length - perView, 0);
+            currentIndex = Math.max(0, Math.min(currentIndex, maxIndex));
+        };
+
+        const refresh = () => {
+            recalculateBounds();
             applyTransform();
             updateControls();
         };
 
-        const goToPage = (page) => {
-            if (maxPage <= 0) {
+        const goToIndex = (index, wrap = false) => {
+            if (maxIndex <= 0) {
                 return;
             }
-            const totalPages = maxPage + 1;
-            currentPage = (page + totalPages) % totalPages;
+
+            if (wrap) {
+                const totalPositions = maxIndex + 1;
+                currentIndex = ((index % totalPositions) + totalPositions) % totalPositions;
+            } else {
+                currentIndex = Math.max(0, Math.min(index, maxIndex));
+            }
+
             applyTransform();
             updateControls();
         };
 
         if (prevButton) {
             prevButton.addEventListener('click', () => {
-                goToPage(currentPage - 1);
+                goToIndex(currentIndex - 1, false);
             });
         }
 
         if (nextButton) {
             nextButton.addEventListener('click', () => {
-                goToPage(currentPage + 1);
+                goToIndex(currentIndex + 1, false);
             });
         }
 
@@ -501,13 +540,73 @@
 
         const startAutoplay = () => {
             stopAutoplay();
-            if (maxPage <= 0) {
+            if (maxIndex <= 0) {
                 return;
             }
             autoplayTimer = window.setInterval(() => {
-                goToPage(currentPage + 1);
+                goToIndex(currentIndex + 1, true);
             }, 5200);
         };
+
+        viewport.addEventListener(
+            'wheel',
+            (event) => {
+                if (maxIndex <= 0) {
+                    return;
+                }
+
+                const primaryDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+                if (Math.abs(primaryDelta) < 16) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (wheelLocked) {
+                    return;
+                }
+
+                wheelLocked = true;
+                stopAutoplay();
+                goToIndex(currentIndex + (primaryDelta > 0 ? 1 : -1), false);
+                window.setTimeout(() => {
+                    wheelLocked = false;
+                    startAutoplay();
+                }, 260);
+            },
+            { passive: false }
+        );
+
+        viewport.addEventListener(
+            'touchstart',
+            (event) => {
+                if (!event.touches || event.touches.length !== 1) {
+                    return;
+                }
+                swipeStartX = event.touches[0].clientX;
+                swipeStartY = event.touches[0].clientY;
+            },
+            { passive: true }
+        );
+
+        viewport.addEventListener(
+            'touchend',
+            (event) => {
+                if (!event.changedTouches || event.changedTouches.length !== 1) {
+                    return;
+                }
+
+                const deltaX = event.changedTouches[0].clientX - swipeStartX;
+                const deltaY = event.changedTouches[0].clientY - swipeStartY;
+                if (Math.abs(deltaX) < 42 || Math.abs(deltaX) <= Math.abs(deltaY)) {
+                    return;
+                }
+
+                stopAutoplay();
+                goToIndex(currentIndex + (deltaX < 0 ? 1 : -1), false);
+                startAutoplay();
+            },
+            { passive: true }
+        );
 
         carousel.addEventListener('mouseenter', stopAutoplay);
         carousel.addEventListener('mouseleave', startAutoplay);

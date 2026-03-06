@@ -103,6 +103,12 @@
     </div>
 </header>
 
+<?php
+if (function_exists('sitio_cero_render_breadcrumbs')) {
+    sitio_cero_render_breadcrumbs();
+}
+?>
+
 <div class="site-brandbar">
     <div class="container site-brandbar__inner">
         <?php $brand_logo = sitio_cero_get_brand_logo_data(); ?>

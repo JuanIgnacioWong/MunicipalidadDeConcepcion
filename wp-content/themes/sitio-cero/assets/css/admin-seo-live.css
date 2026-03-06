@@ -1,0 +1,46 @@
+.sitio-cero-seo-live {
+    display: grid;
+    gap: 10px;
+}
+
+.sitio-cero-seo-live__field {
+    margin: 0;
+}
+
+.sitio-cero-seo-live__field .button.sitio-cero-media-picker {
+    margin-top: 8px;
+}
+
+.sitio-cero-seo-live__status {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #334155;
+}
+
+.sitio-cero-seo-live__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #94a3b8;
+    display: inline-block;
+    box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.25);
+}
+
+.sitio-cero-seo-live__status.is-green .sitio-cero-seo-live__dot {
+    background: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.22);
+}
+
+.sitio-cero-seo-live__status.is-yellow .sitio-cero-seo-live__dot {
+    background: #ca8a04;
+    box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.22);
+}
+
+.sitio-cero-seo-live__status.is-red .sitio-cero-seo-live__dot {
+    background: #dc2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
