@@ -63,6 +63,18 @@ body.front-page h6 {
     text-transform: capitalize;
 }
 
+body.home #noticias .section__header h2,
+body.front-page #noticias .section__header h2,
+body.home #avisos .section__header h2,
+body.front-page #avisos .section__header h2 {
+    background: #0f2343;
+    color: #ffffff;
+    display: inline-block;
+    padding: 0.16em 0.46em;
+    font-weight: 700;
+    font-size: clamp(1.36rem, 3.36vw, 2.11rem);
+}
+
 a {
     color: inherit;
     text-decoration: none;
