@@ -62,7 +62,7 @@ $search_normalized_clean = $sanitized_search_term;
 
 $search_post_types = array_values(
     array_filter(
-        array('post', 'page', 'noticia', 'aviso', 'direccion_municipal', 'evento_municipal'),
+        array('post', 'page', 'noticia', 'aviso', 'direccion_municipal', 'evento_municipal', 'municipalidad'),
         static function ($post_type) {
             return post_type_exists($post_type);
         }

@@ -2389,6 +2389,334 @@ img {
     letter-spacing: -0.01em;
 }
 
+.municipalidad-page {
+    background: linear-gradient(180deg, #eef3f9 0%, #f7f9fc 100%);
+    padding-bottom: clamp(2rem, 4vw, 3rem);
+}
+
+.municipalidad-page__hero {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    background: linear-gradient(135deg, #0f2343 0%, #17599e 100%);
+    color: #ffffff;
+}
+
+.municipalidad-page__hero-inner {
+    width: min(95vw, 1320px);
+    margin: 0 auto;
+    padding: clamp(1.5rem, 3.7vw, 2.35rem) 0 clamp(1.4rem, 3.3vw, 2rem);
+}
+
+.municipalidad-page__eyebrow {
+    margin: 0 0 0.45rem;
+    color: #d8e6ff;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.municipalidad-page__hero h1 {
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(2rem, 4.5vw, 3.1rem);
+    line-height: 1.08;
+}
+
+.municipalidad-page__content-wrap {
+    padding-top: clamp(1rem, 2.6vw, 1.6rem);
+}
+
+.municipalidad-page__content-inner {
+    width: min(95vw, 1320px);
+    margin: 0 auto;
+    display: grid;
+    gap: 1rem;
+}
+
+.municipalidad-page__nav {
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    padding: 0.55rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.municipalidad-page__nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.52rem;
+}
+
+.municipalidad-page__nav-list li {
+    margin: 0;
+}
+
+.municipalidad-page__nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0.45rem 0.82rem;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 35, 67, 0.18);
+    background: #ffffff;
+    color: var(--color-navy);
+    font-weight: 700;
+    line-height: 1.25;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.municipalidad-page__nav-link:hover,
+.municipalidad-page__nav-link:focus-visible {
+    border-color: var(--color-blue);
+    color: var(--color-blue);
+}
+
+.municipalidad-page__nav-link.is-active,
+.municipalidad-page__nav-link.is-active:hover,
+.municipalidad-page__nav-link.is-active:focus-visible {
+    background: #0f2343;
+    border-color: #0f2343;
+    color: #ffffff;
+}
+
+.municipalidad-page__article {
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius);
+    padding: clamp(1rem, 3vw, 2rem);
+    box-shadow: var(--shadow-soft);
+}
+
+.municipalidad-page__media {
+    margin: 0 0 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(15, 35, 67, 0.14);
+    background: #dce8f8;
+}
+
+.municipalidad-page__image {
+    width: 100%;
+    height: auto;
+}
+
+.municipalidad-page__content > :first-child {
+    margin-top: 0;
+}
+
+.municipalidad-page__content > :last-child {
+    margin-bottom: 0;
+}
+
+.municipalidad-page__content p,
+.municipalidad-page__content li {
+    color: #24384f;
+    font-size: 1.04rem;
+    line-height: 1.72;
+}
+
+.municipalidad-page__content h2 {
+    margin-top: 1.4rem;
+    font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+    color: var(--color-navy);
+}
+
+.municipalidad-bio {
+    display: grid;
+    grid-template-columns: minmax(322px, 529px) minmax(0, 1fr);
+    gap: clamp(1rem, 2.2vw, 1.8rem);
+    align-items: start;
+}
+
+.municipalidad-bio__media {
+    margin: 0;
+    aspect-ratio: 3 / 4;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(15, 35, 67, 0.16);
+    background: #dce8f8;
+}
+
+.municipalidad-bio__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.municipalidad-bio__placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 1rem;
+    color: var(--color-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.municipalidad-bio__body {
+    min-width: 0;
+}
+
+.municipalidad-bio__title {
+    margin: 0 0 0.75rem;
+    font-size: clamp(1.4rem, 2.8vw, 2rem);
+    color: var(--color-navy);
+    line-height: 1.12;
+}
+
+.municipalidad-bio__text > :first-child {
+    margin-top: 0;
+}
+
+.municipalidad-bio__text > :last-child {
+    margin-bottom: 0;
+}
+
+.municipalidad-bio__text {
+    text-align: justify;
+}
+
+.municipalidad-bio__text p,
+.municipalidad-bio__text li {
+    color: #24384f;
+    font-size: 1.04rem;
+    line-height: 1.72;
+}
+
+.municipalidad-bio__signature {
+    margin-top: 1.1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--color-line);
+}
+
+.municipalidad-bio__signer {
+    margin: 0;
+    color: var(--color-navy);
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+    font-weight: 400;
+    font-size: clamp(1.08rem, 1.9vw, 1.42rem);
+    line-height: 1;
+}
+
+.municipalidad-bio__role {
+    margin: 0.16rem 0 0;
+    color: var(--color-muted);
+    font-weight: 600;
+    font-size: clamp(0.9rem, 1.15vw, 1.02rem);
+    line-height: 1.28;
+}
+
+.concejo-team {
+    margin: 0;
+}
+
+.concejo-team__grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.concejo-team__card {
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    padding: 0.65rem;
+    box-shadow: 0 6px 16px rgba(15, 35, 67, 0.08);
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.concejo-team__media {
+    margin: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(15, 35, 67, 0.14);
+    background: #dce8f8;
+}
+
+.concejo-team__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.concejo-team__image-placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    color: var(--color-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.concejo-team__name {
+    margin: 0;
+    color: var(--color-navy);
+    font-size: clamp(1rem, 1.12vw, 1.15rem);
+    line-height: 1.22;
+}
+
+.concejo-team__email {
+    margin: 0;
+    color: var(--color-blue);
+    font-weight: 700;
+    font-size: 0.9rem;
+    word-break: break-word;
+    text-decoration: underline;
+}
+
+.concejo-team__email:hover,
+.concejo-team__email:focus-visible {
+    color: #0f2343;
+}
+
+.concejo-team__email--empty {
+    color: var(--color-muted);
+    text-decoration: none;
+}
+
+@media (max-width: 1360px) {
+    .concejo-team__grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1120px) {
+    .concejo-team__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    .concejo-team__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .concejo-team__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .evento-single__content > :first-child {
     margin-top: 0;
 }
@@ -2961,6 +3289,28 @@ body.has-news-gallery-lightbox {
 
     .content-single .section__header h1 {
         font-size: clamp(1.86rem, 6.6vw, 2.4rem);
+    }
+
+    .municipalidad-page__hero h1 {
+        font-size: clamp(1.75rem, 8vw, 2.35rem);
+    }
+
+    .municipalidad-page__nav-list {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .municipalidad-page__nav-link {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .municipalidad-bio {
+        grid-template-columns: 1fr;
+    }
+
+    .municipalidad-bio__media {
+        max-width: min(86vw, 483px);
     }
 
     .single-noticia__content p,

@@ -504,7 +504,7 @@ function sitio_cero_seed_default_topbar_items()
         return;
     }
 
-    $seed_version = '1';
+    $seed_version = '2';
     $seed_option = 'sitio_cero_topbar_items_seeded_version';
     if ((string) get_option($seed_option, '') === $seed_version) {
         return;
@@ -963,6 +963,40 @@ function sitio_cero_enqueue_aviso_grilla_admin_assets($hook_suffix)
 }
 add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_aviso_grilla_admin_assets');
 
+function sitio_cero_enqueue_municipalidad_admin_assets($hook_suffix)
+{
+    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || 'municipalidad' !== $screen->post_type) {
+        return;
+    }
+
+    $version = wp_get_theme()->get('Version');
+
+    wp_enqueue_media();
+
+    wp_enqueue_script(
+        'sitio-cero-admin-aviso-grilla',
+        get_template_directory_uri() . '/assets/js/admin-aviso-grilla.js',
+        array('jquery'),
+        $version,
+        true
+    );
+
+    wp_localize_script(
+        'sitio-cero-admin-aviso-grilla',
+        'sitioCeroAvisoGrilla',
+        array(
+            'frameTitle'  => __('Selecciona una imagen horizontal', 'sitio-cero'),
+            'frameButton' => __('Usar imagen', 'sitio-cero'),
+        )
+    );
+}
+add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_municipalidad_admin_assets');
+
 function sitio_cero_enqueue_noticia_admin_assets($hook_suffix)
 {
     if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
@@ -1410,7 +1444,7 @@ add_action('init', 'sitio_cero_seed_primary_menu_once', 21);
 function sitio_cero_seed_primary_direcciones_mega_once()
 {
     $seed_option = 'sitio_cero_primary_menu_direcciones_mega_seeded';
-    $seed_version = '1';
+    $seed_version = '2';
     if ($seed_version === (string) get_option($seed_option, '')) {
         return;
     }
@@ -1865,6 +1899,511 @@ function sitio_cero_register_direccion_municipal_post_type()
     );
 }
 add_action('init', 'sitio_cero_register_direccion_municipal_post_type');
+
+function sitio_cero_register_municipalidad_post_type()
+{
+    $labels = array(
+        'name'               => __('Municipalidad', 'sitio-cero'),
+        'singular_name'      => __('Pagina municipalidad', 'sitio-cero'),
+        'menu_name'          => __('Municipalidad', 'sitio-cero'),
+        'name_admin_bar'     => __('Pagina municipalidad', 'sitio-cero'),
+        'add_new'            => __('Agregar nueva', 'sitio-cero'),
+        'add_new_item'       => __('Agregar pagina municipalidad', 'sitio-cero'),
+        'new_item'           => __('Nueva pagina municipalidad', 'sitio-cero'),
+        'edit_item'          => __('Editar pagina municipalidad', 'sitio-cero'),
+        'view_item'          => __('Ver pagina municipalidad', 'sitio-cero'),
+        'all_items'          => __('Paginas municipalidad', 'sitio-cero'),
+        'search_items'       => __('Buscar paginas municipalidad', 'sitio-cero'),
+        'not_found'          => __('No se encontraron paginas municipalidad.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay paginas municipalidad en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'municipalidad',
+        array(
+            'labels'            => $labels,
+            'public'            => true,
+            'show_ui'           => true,
+            'show_in_menu'      => true,
+            'show_in_admin_bar' => true,
+            'show_in_nav_menus' => true,
+            'show_in_rest'      => true,
+            'hierarchical'      => true,
+            'has_archive'       => true,
+            'rewrite'           => array('slug' => 'municipalidad'),
+            'menu_position'     => 25,
+            'menu_icon'         => 'dashicons-admin-site-alt3',
+            'supports'          => array('title', 'editor', 'excerpt', 'thumbnail', 'page-attributes', 'revisions'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_municipalidad_post_type');
+
+function sitio_cero_get_default_municipalidad_pages()
+{
+    return array(
+        array(
+            'title'      => __('Alcalde', 'sitio-cero'),
+            'slug'       => 'alcalde',
+            'menu_order' => 1,
+            'content'    => __('Ingresa aqui la informacion del alcalde, su mensaje y lineamientos de gestion municipal.', 'sitio-cero'),
+        ),
+        array(
+            'title'      => __('Concejo Municipal', 'sitio-cero'),
+            'slug'       => 'concejo-municipal',
+            'menu_order' => 2,
+            'content'    => __('Ingresa aqui la informacion del concejo municipal, integrantes, comisiones y actas.', 'sitio-cero'),
+        ),
+    );
+}
+
+function sitio_cero_get_default_concejo_members()
+{
+    $members = array();
+
+    for ($index = 1; $index <= 10; $index++) {
+        $members[] = array(
+            'name'      => sprintf(__('Concejal %d', 'sitio-cero'), $index),
+            'email'     => 'concejal' . $index . '@municipio.cl',
+            'image_url' => '',
+        );
+    }
+
+    return $members;
+}
+
+function sitio_cero_seed_default_municipalidad_pages()
+{
+    if (!post_type_exists('municipalidad')) {
+        return;
+    }
+
+    $seed_version = '2';
+    $already_seeded_version = (string) get_option('sitio_cero_default_municipalidad_seeded_version', '');
+    if ($seed_version === $already_seeded_version) {
+        return;
+    }
+
+    $defaults = sitio_cero_get_default_municipalidad_pages();
+    foreach ($defaults as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $title = isset($item['title']) ? trim((string) $item['title']) : '';
+        if ('' === $title) {
+            continue;
+        }
+
+        $slug_source = isset($item['slug']) ? (string) $item['slug'] : $title;
+        $slug = sanitize_title($slug_source);
+        if ('' === $slug) {
+            $slug = sanitize_title($title);
+        }
+
+        $existing = get_posts(
+            array(
+                'post_type'      => 'municipalidad',
+                'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+                'name'           => $slug,
+                'posts_per_page' => 1,
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+            )
+        );
+
+        if (!empty($existing)) {
+            $post_id = (int) $existing[0];
+        } else {
+            $post_id = wp_insert_post(
+                array(
+                    'post_type'    => 'municipalidad',
+                    'post_status'  => 'publish',
+                    'post_title'   => $title,
+                    'post_name'    => $slug,
+                    'post_content' => isset($item['content']) ? (string) $item['content'] : '',
+                    'menu_order'   => isset($item['menu_order']) ? (int) $item['menu_order'] : 0,
+                ),
+                true
+            );
+        }
+
+        if (is_wp_error($post_id) || !$post_id) {
+            continue;
+        }
+
+        update_post_meta((int) $post_id, '_sitio_cero_demo_municipalidad', '1');
+
+        if ('alcalde' === $slug) {
+            $bio_enabled = (string) get_post_meta((int) $post_id, 'sitio_cero_municipalidad_bio_enabled', true);
+            if ('' === $bio_enabled) {
+                update_post_meta((int) $post_id, 'sitio_cero_municipalidad_bio_enabled', '1');
+            }
+
+            $bio_title = (string) get_post_meta((int) $post_id, 'sitio_cero_municipalidad_bio_title', true);
+            if ('' === trim($bio_title)) {
+                update_post_meta((int) $post_id, 'sitio_cero_municipalidad_bio_title', __('Mensaje del alcalde', 'sitio-cero'));
+            }
+
+            $bio_text = (string) get_post_meta((int) $post_id, 'sitio_cero_municipalidad_bio_text', true);
+            if ('' === trim($bio_text)) {
+                update_post_meta(
+                    (int) $post_id,
+                    'sitio_cero_municipalidad_bio_text',
+                    __('Este espacio esta pensado para publicar una biografia politica e institucional del alcalde, destacando trayectoria, prioridades y compromiso con la comuna.', 'sitio-cero')
+                );
+            }
+
+            $signer_name = (string) get_post_meta((int) $post_id, 'sitio_cero_municipalidad_signer_name', true);
+            if ('' === trim($signer_name)) {
+                update_post_meta((int) $post_id, 'sitio_cero_municipalidad_signer_name', __('Nombre del alcalde', 'sitio-cero'));
+            }
+
+            $signer_role = (string) get_post_meta((int) $post_id, 'sitio_cero_municipalidad_signer_role', true);
+            if ('' === trim($signer_role)) {
+                update_post_meta((int) $post_id, 'sitio_cero_municipalidad_signer_role', __('Alcalde', 'sitio-cero'));
+            }
+        } elseif ('concejo-municipal' === $slug) {
+            $concejo_enabled = (string) get_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_enabled', true);
+            if ('' === $concejo_enabled) {
+                update_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_enabled', '1');
+            }
+
+            $concejo_members = get_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_members', true);
+            if (!is_array($concejo_members) || empty($concejo_members)) {
+                update_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_members', sitio_cero_get_default_concejo_members());
+            }
+        }
+    }
+
+    update_option('sitio_cero_default_municipalidad_seeded_version', $seed_version);
+}
+add_action('init', 'sitio_cero_seed_default_municipalidad_pages', 47);
+
+function sitio_cero_add_municipalidad_metaboxes($post_type, $post)
+{
+    if ('municipalidad' !== (string) $post_type) {
+        return;
+    }
+
+    $post_slug = '';
+    if ($post instanceof WP_Post) {
+        $post_slug = (string) $post->post_name;
+    }
+
+    $concejo_slugs = array('concejo-municipal', 'concejales');
+    $is_concejo_page = in_array($post_slug, $concejo_slugs, true);
+
+    if (!$is_concejo_page) {
+        add_meta_box(
+            'sitio_cero_municipalidad_bio',
+            __('Bloque biografia de autoridad', 'sitio-cero'),
+            'sitio_cero_render_municipalidad_bio_metabox',
+            'municipalidad',
+            'normal',
+            'high'
+        );
+    }
+
+    add_meta_box(
+        'sitio_cero_municipalidad_concejo',
+        __('Grilla Concejo Municipal (5x2)', 'sitio-cero'),
+        'sitio_cero_render_municipalidad_concejo_metabox',
+        'municipalidad',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_municipalidad_metaboxes', 10, 2);
+
+function sitio_cero_render_municipalidad_bio_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_municipalidad_bio_meta', 'sitio_cero_municipalidad_bio_meta_nonce');
+
+    $is_alcalde = 'alcalde' === (string) $post->post_name;
+    $bio_enabled_value = (string) get_post_meta($post->ID, 'sitio_cero_municipalidad_bio_enabled', true);
+    $bio_enabled = '1' === $bio_enabled_value || ($is_alcalde && '' === $bio_enabled_value);
+    $bio_title = get_post_meta($post->ID, 'sitio_cero_municipalidad_bio_title', true);
+    $bio_text = get_post_meta($post->ID, 'sitio_cero_municipalidad_bio_text', true);
+    $signer_name = get_post_meta($post->ID, 'sitio_cero_municipalidad_signer_name', true);
+    $signer_role = get_post_meta($post->ID, 'sitio_cero_municipalidad_signer_role', true);
+
+    if (!is_string($bio_title)) {
+        $bio_title = '';
+    }
+    if (!is_string($bio_text)) {
+        $bio_text = '';
+    }
+    if (!is_string($signer_name)) {
+        $signer_name = '';
+    }
+    if (!is_string($signer_role)) {
+        $signer_role = '';
+    }
+    ?>
+    <?php if (!$is_alcalde) : ?>
+        <p class="description"><?php esc_html_e('Este bloque fue pensado para la pagina con slug "alcalde". Puedes dejarlo vacio en otras paginas.', 'sitio-cero'); ?></p>
+    <?php endif; ?>
+
+    <p>
+        <label>
+            <input type="checkbox" name="sitio_cero_municipalidad_bio_enabled" value="1" <?php checked($bio_enabled); ?>>
+            <?php esc_html_e('Activar bloque biografia en dos columnas', 'sitio-cero'); ?>
+        </label>
+    </p>
+
+    <p class="description">
+        <?php esc_html_e('La imagen de la columna izquierda usa la Imagen destacada y se muestra en formato vertical.', 'sitio-cero'); ?>
+    </p>
+
+    <p>
+        <label for="sitio_cero_municipalidad_bio_title"><strong><?php esc_html_e('Titulo del bloque', 'sitio-cero'); ?></strong></label>
+        <input id="sitio_cero_municipalidad_bio_title" type="text" name="sitio_cero_municipalidad_bio_title" class="widefat" value="<?php echo esc_attr($bio_title); ?>">
+    </p>
+
+    <p>
+        <label for="sitio_cero_municipalidad_bio_text"><strong><?php esc_html_e('Cuerpo del texto', 'sitio-cero'); ?></strong></label>
+        <textarea id="sitio_cero_municipalidad_bio_text" name="sitio_cero_municipalidad_bio_text" class="widefat" rows="8"><?php echo esc_textarea($bio_text); ?></textarea>
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <p style="margin:0;">
+            <label for="sitio_cero_municipalidad_signer_name"><strong><?php esc_html_e('Nombre firmante', 'sitio-cero'); ?></strong></label>
+            <input id="sitio_cero_municipalidad_signer_name" type="text" name="sitio_cero_municipalidad_signer_name" class="widefat" value="<?php echo esc_attr($signer_name); ?>">
+        </p>
+        <p style="margin:0;">
+            <label for="sitio_cero_municipalidad_signer_role"><strong><?php esc_html_e('Cargo firmante', 'sitio-cero'); ?></strong></label>
+            <input id="sitio_cero_municipalidad_signer_role" type="text" name="sitio_cero_municipalidad_signer_role" class="widefat" value="<?php echo esc_attr($signer_role); ?>">
+        </p>
+    </div>
+    <?php
+}
+
+function sitio_cero_render_municipalidad_concejo_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_municipalidad_bio_meta', 'sitio_cero_municipalidad_bio_meta_nonce');
+
+    $is_concejo_page = 'concejo-municipal' === (string) $post->post_name;
+    $concejo_enabled_value = (string) get_post_meta($post->ID, 'sitio_cero_municipalidad_concejo_enabled', true);
+    $concejo_enabled = '1' === $concejo_enabled_value || ($is_concejo_page && '' === $concejo_enabled_value);
+    $members = get_post_meta($post->ID, 'sitio_cero_municipalidad_concejo_members', true);
+
+    if (!is_array($members) || empty($members)) {
+        $members = sitio_cero_get_default_concejo_members();
+    }
+
+    $members = array_slice(array_values($members), 0, 10);
+    while (count($members) < 10) {
+        $members[] = array(
+            'name'      => '',
+            'email'     => '',
+            'image_url' => '',
+        );
+    }
+    ?>
+    <?php if (!$is_concejo_page) : ?>
+        <p class="description"><?php esc_html_e('Este bloque fue pensado para la pagina con slug "concejo-municipal".', 'sitio-cero'); ?></p>
+    <?php endif; ?>
+
+    <p>
+        <label>
+            <input type="checkbox" name="sitio_cero_municipalidad_concejo_enabled" value="1" <?php checked($concejo_enabled); ?>>
+            <?php esc_html_e('Activar grilla de equipo (5 columnas x 2 filas)', 'sitio-cero'); ?>
+        </label>
+    </p>
+
+    <p class="description"><?php esc_html_e('Edita nombre, correo e imagen horizontal de cada integrante. La imagen acepta URL (por ejemplo desde Biblioteca de Medios).', 'sitio-cero'); ?></p>
+
+    <table class="widefat striped" style="max-width:100%;">
+        <thead>
+            <tr>
+                <th style="width:38%;"><?php esc_html_e('Nombre', 'sitio-cero'); ?></th>
+                <th style="width:30%;"><?php esc_html_e('Correo electronico', 'sitio-cero'); ?></th>
+                <th style="width:32%;"><?php esc_html_e('URL imagen (horizontal)', 'sitio-cero'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($members as $index => $member) : ?>
+                <?php
+                $member_name = is_array($member) && isset($member['name']) ? (string) $member['name'] : '';
+                $member_email = is_array($member) && isset($member['email']) ? (string) $member['email'] : '';
+                $member_image_url = is_array($member) && isset($member['image_url']) ? (string) $member['image_url'] : '';
+                ?>
+                <tr>
+                    <td>
+                        <label for="sitio_cero_municipalidad_concejo_member_name_<?php echo esc_attr((string) $index); ?>" class="screen-reader-text"><?php esc_html_e('Nombre', 'sitio-cero'); ?></label>
+                        <input
+                            id="sitio_cero_municipalidad_concejo_member_name_<?php echo esc_attr((string) $index); ?>"
+                            type="text"
+                            name="sitio_cero_municipalidad_concejo_member_name[]"
+                            class="widefat"
+                            value="<?php echo esc_attr($member_name); ?>"
+                            placeholder="<?php echo esc_attr(sprintf(__('Concejal %d', 'sitio-cero'), $index + 1)); ?>"
+                        >
+                    </td>
+                    <td>
+                        <label for="sitio_cero_municipalidad_concejo_member_email_<?php echo esc_attr((string) $index); ?>" class="screen-reader-text"><?php esc_html_e('Correo electronico', 'sitio-cero'); ?></label>
+                        <input
+                            id="sitio_cero_municipalidad_concejo_member_email_<?php echo esc_attr((string) $index); ?>"
+                            type="email"
+                            name="sitio_cero_municipalidad_concejo_member_email[]"
+                            class="widefat"
+                            value="<?php echo esc_attr($member_email); ?>"
+                            placeholder="<?php echo esc_attr('concejal' . ($index + 1) . '@municipio.cl'); ?>"
+                        >
+                    </td>
+                    <td>
+                        <label for="sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>" class="screen-reader-text"><?php esc_html_e('URL imagen', 'sitio-cero'); ?></label>
+                        <input
+                            id="sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>"
+                            type="url"
+                            name="sitio_cero_municipalidad_concejo_member_image[]"
+                            class="widefat"
+                            value="<?php echo esc_attr(esc_url_raw($member_image_url)); ?>"
+                            placeholder="https://..."
+                        >
+                        <button type="button" class="button button-secondary sitio-cero-media-picker" data-target="#sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>">
+                            <?php esc_html_e('Seleccionar desde biblioteca', 'sitio-cero'); ?>
+                        </button>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php
+}
+
+function sitio_cero_save_municipalidad_bio_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_municipalidad_bio_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = wp_unslash($_POST['sitio_cero_municipalidad_bio_meta_nonce']);
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_municipalidad_bio_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    if ('municipalidad' !== get_post_type($post_id)) {
+        return;
+    }
+
+    $bio_enabled = isset($_POST['sitio_cero_municipalidad_bio_enabled']) ? '1' : '0';
+    update_post_meta($post_id, 'sitio_cero_municipalidad_bio_enabled', $bio_enabled);
+
+    $bio_title = isset($_POST['sitio_cero_municipalidad_bio_title'])
+        ? sanitize_text_field(wp_unslash($_POST['sitio_cero_municipalidad_bio_title']))
+        : '';
+    if ('' !== trim($bio_title)) {
+        update_post_meta($post_id, 'sitio_cero_municipalidad_bio_title', $bio_title);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_municipalidad_bio_title');
+    }
+
+    $bio_text = isset($_POST['sitio_cero_municipalidad_bio_text'])
+        ? wp_kses_post(wp_unslash($_POST['sitio_cero_municipalidad_bio_text']))
+        : '';
+    if ('' !== trim(wp_strip_all_tags($bio_text))) {
+        update_post_meta($post_id, 'sitio_cero_municipalidad_bio_text', $bio_text);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_municipalidad_bio_text');
+    }
+
+    $signer_name = isset($_POST['sitio_cero_municipalidad_signer_name'])
+        ? sanitize_text_field(wp_unslash($_POST['sitio_cero_municipalidad_signer_name']))
+        : '';
+    if ('' !== trim($signer_name)) {
+        update_post_meta($post_id, 'sitio_cero_municipalidad_signer_name', $signer_name);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_municipalidad_signer_name');
+    }
+
+    $signer_role = isset($_POST['sitio_cero_municipalidad_signer_role'])
+        ? sanitize_text_field(wp_unslash($_POST['sitio_cero_municipalidad_signer_role']))
+        : '';
+    if ('' !== trim($signer_role)) {
+        update_post_meta($post_id, 'sitio_cero_municipalidad_signer_role', $signer_role);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_municipalidad_signer_role');
+    }
+
+    $concejo_enabled = isset($_POST['sitio_cero_municipalidad_concejo_enabled']) ? '1' : '0';
+    update_post_meta($post_id, 'sitio_cero_municipalidad_concejo_enabled', $concejo_enabled);
+
+    $member_names = isset($_POST['sitio_cero_municipalidad_concejo_member_name'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_name'])
+        : array();
+    $member_emails = isset($_POST['sitio_cero_municipalidad_concejo_member_email'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_email'])
+        : array();
+    $member_images = isset($_POST['sitio_cero_municipalidad_concejo_member_image'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_image'])
+        : array();
+
+    if (!is_array($member_names)) {
+        $member_names = array();
+    }
+    if (!is_array($member_emails)) {
+        $member_emails = array();
+    }
+    if (!is_array($member_images)) {
+        $member_images = array();
+    }
+
+    $members = array();
+    $max_members = 10;
+    for ($index = 0; $index < $max_members; $index++) {
+        $name_raw = isset($member_names[$index]) ? (string) $member_names[$index] : '';
+        $email_raw = isset($member_emails[$index]) ? (string) $member_emails[$index] : '';
+        $image_raw = isset($member_images[$index]) ? (string) $member_images[$index] : '';
+
+        $name = sanitize_text_field($name_raw);
+        $email = sanitize_email($email_raw);
+        $image_url = esc_url_raw($image_raw);
+
+        if ('' === trim($name) && '' === trim($email) && '' === trim($image_url)) {
+            continue;
+        }
+
+        $members[] = array(
+            'name'      => $name,
+            'email'     => $email,
+            'image_url' => $image_url,
+        );
+    }
+
+    if (!empty($members)) {
+        update_post_meta($post_id, 'sitio_cero_municipalidad_concejo_members', $members);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_municipalidad_concejo_members');
+    }
+}
+add_action('save_post_municipalidad', 'sitio_cero_save_municipalidad_bio_meta');
+
+function sitio_cero_flush_municipalidad_rewrite_rules_once()
+{
+    if (!post_type_exists('municipalidad')) {
+        return;
+    }
+
+    $flush_version = '1';
+    $stored_version = (string) get_option('sitio_cero_municipalidad_rewrite_flushed_version', '');
+    if ($flush_version === $stored_version) {
+        return;
+    }
+
+    flush_rewrite_rules(false);
+    update_option('sitio_cero_municipalidad_rewrite_flushed_version', $flush_version);
+}
+add_action('init', 'sitio_cero_flush_municipalidad_rewrite_rules_once', 99);
 
 function sitio_cero_register_canal_ciudadano_post_type()
 {
@@ -7069,6 +7608,7 @@ function sitio_cero_get_seo_supported_post_types()
     $candidates = array(
         'page',
         'post',
+        'municipalidad',
         'noticia',
         'aviso',
         'direccion_municipal',

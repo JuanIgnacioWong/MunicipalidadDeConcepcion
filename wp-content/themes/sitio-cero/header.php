@@ -155,7 +155,7 @@ if (function_exists('sitio_cero_render_breadcrumbs')) {
             class="site-header-edge-tools"
             data-header-search
             data-search-endpoint="<?php echo esc_url(rest_url('wp/v2/search')); ?>"
-            data-search-types="post,page,noticia,aviso,direccion_municipal,evento_municipal"
+            data-search-types="post,page,noticia,aviso,direccion_municipal,evento_municipal,municipalidad"
         >
             <div class="site-header-search-shell" data-header-search-shell>
                 <button
