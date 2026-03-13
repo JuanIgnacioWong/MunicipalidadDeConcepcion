@@ -630,6 +630,181 @@
         carousels.forEach((carousel) => initAvisosCarousel(carousel));
     };
 
+    const initNewsCarousel = (carousel) => {
+        const track = carousel.querySelector('[data-news-track]') || carousel.querySelector('.news-carousel__track');
+        const cards = Array.from(carousel.querySelectorAll('.news-card'));
+        const controlsRoot = carousel.parentElement || carousel;
+        const prevButton = controlsRoot.querySelector('[data-news-prev]');
+        const nextButton = controlsRoot.querySelector('[data-news-next]');
+
+        if (!track || cards.length === 0) {
+            return;
+        }
+
+        let currentIndex = 0;
+        let maxIndex = 0;
+        let autoplayTimer = null;
+        let scrollRaf = null;
+        let pointerDown = false;
+
+        const getPerView = () => {
+            const rawValue = window.getComputedStyle(carousel).getPropertyValue('--news-visible');
+            const parsed = Number.parseInt(rawValue || '4', 10);
+            if (Number.isNaN(parsed) || parsed <= 0) {
+                return 4;
+            }
+            return parsed;
+        };
+
+        const updateControls = () => {
+            const isStatic = maxIndex <= 0;
+            if (prevButton) {
+                prevButton.disabled = isStatic;
+            }
+            if (nextButton) {
+                nextButton.disabled = isStatic;
+            }
+        };
+
+        const getTrackGap = () => {
+            const styles = window.getComputedStyle(track);
+            const rawGap = styles.columnGap || styles.gap || '0';
+            const gap = Number.parseFloat(rawGap);
+            if (Number.isNaN(gap) || gap < 0) {
+                return 0;
+            }
+            return gap;
+        };
+
+        const getCardStep = () => {
+            if (!cards[0]) {
+                return carousel.clientWidth;
+            }
+            return cards[0].getBoundingClientRect().width + getTrackGap();
+        };
+
+        const recalculateBounds = () => {
+            const perView = getPerView();
+            maxIndex = Math.max(cards.length - perView, 0);
+            currentIndex = Math.max(0, Math.min(currentIndex, maxIndex));
+        };
+
+        const goToIndex = (index, options = {}) => {
+            const { wrap = false, behavior = 'smooth' } = options;
+            if (maxIndex <= 0) {
+                currentIndex = 0;
+                carousel.scrollTo({ left: 0, behavior });
+                updateControls();
+                return;
+            }
+            if (wrap) {
+                const totalPositions = maxIndex + 1;
+                currentIndex = ((index % totalPositions) + totalPositions) % totalPositions;
+            } else {
+                currentIndex = Math.max(0, Math.min(index, maxIndex));
+            }
+
+            const step = getCardStep();
+            carousel.scrollTo({
+                left: currentIndex * step,
+                behavior,
+            });
+            updateControls();
+        };
+
+        const syncIndexFromScroll = () => {
+            if (scrollRaf) {
+                return;
+            }
+            scrollRaf = window.requestAnimationFrame(() => {
+                scrollRaf = null;
+                const step = getCardStep();
+                if (step <= 0) {
+                    return;
+                }
+                const rawIndex = Math.round(carousel.scrollLeft / step);
+                currentIndex = Math.max(0, Math.min(rawIndex, maxIndex));
+                updateControls();
+            });
+        };
+
+        const stopAutoplay = () => {
+            if (autoplayTimer) {
+                window.clearInterval(autoplayTimer);
+                autoplayTimer = null;
+            }
+        };
+
+        const startAutoplay = () => {
+            stopAutoplay();
+            if (maxIndex <= 0) {
+                return;
+            }
+            autoplayTimer = window.setInterval(() => {
+                goToIndex(currentIndex + 1, { wrap: true, behavior: 'smooth' });
+            }, 5200);
+        };
+
+        if (prevButton) {
+            prevButton.addEventListener('click', () => {
+                stopAutoplay();
+                goToIndex(currentIndex - 1, { wrap: false, behavior: 'smooth' });
+                startAutoplay();
+            });
+        }
+
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                stopAutoplay();
+                goToIndex(currentIndex + 1, { wrap: false, behavior: 'smooth' });
+                startAutoplay();
+            });
+        }
+
+        carousel.addEventListener('scroll', syncIndexFromScroll, { passive: true });
+        carousel.addEventListener('pointerdown', () => {
+            pointerDown = true;
+            stopAutoplay();
+        });
+        carousel.addEventListener('pointerup', () => {
+            if (!pointerDown) {
+                return;
+            }
+            pointerDown = false;
+            startAutoplay();
+        });
+        carousel.addEventListener('pointerleave', () => {
+            if (!pointerDown) {
+                return;
+            }
+            pointerDown = false;
+            startAutoplay();
+        });
+
+        carousel.addEventListener('mouseenter', stopAutoplay);
+        carousel.addEventListener('mouseleave', startAutoplay);
+        carousel.addEventListener('focusin', stopAutoplay);
+        carousel.addEventListener('focusout', (event) => {
+            if (!carousel.contains(event.relatedTarget)) {
+                startAutoplay();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            recalculateBounds();
+            goToIndex(currentIndex, { wrap: false, behavior: 'auto' });
+        });
+
+        recalculateBounds();
+        goToIndex(0, { wrap: false, behavior: 'auto' });
+        startAutoplay();
+    };
+
+    const initNewsCarousels = () => {
+        const carousels = document.querySelectorAll('[data-news-carousel]');
+        carousels.forEach((carousel) => initNewsCarousel(carousel));
+    };
+
     const initNewsGallery = (gallery) => {
         const slides = Array.from(gallery.querySelectorAll('[data-news-gallery-slide]'));
         if (slides.length === 0) {
@@ -1651,6 +1826,7 @@
     initNavigation();
     initHeroSliders();
     initAvisosCarousels();
+    initNewsCarousels();
     initNewsGalleries();
     initDireccionAccordions();
     initShortcodeAccordions();

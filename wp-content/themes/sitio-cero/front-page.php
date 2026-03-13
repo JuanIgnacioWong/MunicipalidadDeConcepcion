@@ -150,21 +150,34 @@ get_header();
         </div>
     </section>
 
-    <section id="noticias" class="section">
-        <div class="container">
-            <div class="section__header section__header--split">
-                <div>
-                    <h2>Noticias municipales</h2>
+    <section id="noticias" class="section section--news">
+        <div class="news-section__inner">
+            <div class="news-section__left">
+                <div class="news-section__title">
+                    <span class="news-section__bar" aria-hidden="true">
+                        <span class="news-section__bar-segment news-section__bar-segment--one"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--two"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--three"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--four"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--five"></span>
+                    </span>
+                    <h2 class="news-section__heading">
+                        <span class="news-section__heading-line news-section__heading-line--light">Noticias</span>
+                        <span class="news-section__heading-line news-section__heading-line--bold">Concepci&#243;n</span>
+                    </h2>
                 </div>
-                <a class="section-link" href="<?php echo esc_url($news_archive_url); ?>">Ver todas</a>
             </div>
+            <div class="news-section__right">
+                <div class="news-section__top">
+                    <a class="section-link" href="<?php echo esc_url($news_archive_url); ?>">Ver todas</a>
+                </div>
 
             <?php
             $latest_posts = new WP_Query(
                 array(
                     'post_type'           => 'noticia',
                     'post_status'         => 'publish',
-                    'posts_per_page'      => 4,
+                    'posts_per_page'      => 8,
                     'ignore_sticky_posts' => true,
                     'orderby'             => 'date',
                     'order'               => 'DESC',
@@ -180,7 +193,8 @@ get_header();
             ?>
 
             <?php if ($latest_posts->have_posts()) : ?>
-                <div class="news-grid">
+                <div class="news-carousel" data-news-carousel>
+                    <div class="news-carousel__track" data-news-track>
                     <?php while ($latest_posts->have_posts()) : $latest_posts->the_post(); ?>
                         <article <?php post_class('news-card'); ?>>
                             <a class="news-card__media" href="<?php the_permalink(); ?>">
@@ -201,13 +215,20 @@ get_header();
                             </div>
                         </article>
                     <?php endwhile; ?>
+                    </div>
+                </div>
+                <div class="news-carousel__controls" aria-label="<?php esc_attr_e('Navegacion de noticias', 'sitio-cero'); ?>">
+                    <button class="news-carousel__arrow news-carousel__arrow--prev" type="button" data-news-prev aria-label="<?php esc_attr_e('Noticias anteriores', 'sitio-cero'); ?>">
+                        <span aria-hidden="true">&#x276E;</span>
+                    </button>
+                    <button class="news-carousel__arrow news-carousel__arrow--next" type="button" data-news-next aria-label="<?php esc_attr_e('Noticias siguientes', 'sitio-cero'); ?>">
+                        <span aria-hidden="true">&#x276F;</span>
+                    </button>
                 </div>
                 <?php wp_reset_postdata(); ?>
             <?php else : ?>
                 <?php get_template_part('template-parts/content', 'none'); ?>
             <?php endif; ?>
-            <div class="news-section__actions">
-                <a class="button" href="<?php echo esc_url($news_archive_url); ?>"><?php esc_html_e('Leer mas noticias', 'sitio-cero'); ?></a>
             </div>
         </div>
     </section>
@@ -230,8 +251,20 @@ get_header();
             ?>
 
             <div class="section__header section__header--split">
-                <div>
-                    <h2><?php esc_html_e('Avisos municipales', 'sitio-cero'); ?></h2>
+                <div class="news-section__title">
+                    <span class="news-section__bar" aria-hidden="true">
+                        <span class="news-section__bar-segment news-section__bar-segment--one"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--two"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--three"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--four"></span>
+                        <span class="news-section__bar-segment news-section__bar-segment--five"></span>
+                    </span>
+                    <h2 class="news-section__heading">
+                        <span class="news-section__heading-line">
+                            <span class="news-section__heading-line--light"><?php esc_html_e('Avisos', 'sitio-cero'); ?></span>
+                            <span class="news-section__heading-line--bold"><?php esc_html_e('municipales', 'sitio-cero'); ?></span>
+                        </span>
+                    </h2>
                 </div>
             </div>
 
