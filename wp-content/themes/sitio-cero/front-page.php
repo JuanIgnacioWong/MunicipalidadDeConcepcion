@@ -153,7 +153,7 @@ get_header();
     <section id="noticias" class="section section--news">
         <div class="news-section__inner">
             <div class="news-section__left">
-                <div class="news-section__title">
+                <div class="news-section__title news-section__title--news">
                     <span class="news-section__bar" aria-hidden="true">
                         <span class="news-section__bar-segment news-section__bar-segment--one"></span>
                         <span class="news-section__bar-segment news-section__bar-segment--two"></span>
@@ -163,7 +163,9 @@ get_header();
                     </span>
                     <h2 class="news-section__heading">
                         <span class="news-section__heading-line news-section__heading-line--light">Noticias</span>
-                        <span class="news-section__heading-line news-section__heading-line--bold">Concepci&#243;n</span>
+                        <span class="news-section__heading-line news-section__heading-line--bold">
+                            <span class="news-section__heading-space" aria-hidden="true">&nbsp;</span>Concepci&#243;n
+                        </span>
                     </h2>
                 </div>
             </div>
@@ -173,11 +175,12 @@ get_header();
                 </div>
 
             <?php
+            $news_per_page = wp_is_mobile() ? 2 : 8;
             $latest_posts = new WP_Query(
                 array(
                     'post_type'           => 'noticia',
                     'post_status'         => 'publish',
-                    'posts_per_page'      => 8,
+                    'posts_per_page'      => $news_per_page,
                     'ignore_sticky_posts' => true,
                     'orderby'             => 'date',
                     'order'               => 'DESC',
@@ -251,7 +254,7 @@ get_header();
             ?>
 
             <div class="section__header section__header--split">
-                <div class="news-section__title">
+                <div class="news-section__title news-section__title--avisos">
                     <span class="news-section__bar" aria-hidden="true">
                         <span class="news-section__bar-segment news-section__bar-segment--one"></span>
                         <span class="news-section__bar-segment news-section__bar-segment--two"></span>
@@ -319,11 +322,12 @@ get_header();
     <section id="avisos-grilla" class="section section--paper section--avisos-grid">
         <div class="container">
             <?php
+            $avisos_grilla_per_page = wp_is_mobile() ? 10 : 8;
             $avisos_grilla_query = new WP_Query(
                 array(
                     'post_type'      => 'aviso_grilla',
                     'post_status'    => 'publish',
-                    'posts_per_page' => 8,
+                    'posts_per_page' => $avisos_grilla_per_page,
                     'orderby'        => array(
                         'menu_order' => 'ASC',
                         'date'       => 'DESC',
