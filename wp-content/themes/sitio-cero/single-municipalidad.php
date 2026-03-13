@@ -126,11 +126,13 @@ get_header();
                             <div class="municipalidad-bio__body">
                                 <h2 class="municipalidad-bio__title"><?php echo esc_html($bio_display_title); ?></h2>
 
-                                <?php if ('' !== trim($bio_content_html)) : ?>
-                                    <div class="municipalidad-bio__text">
-                                        <?php echo wp_kses_post($bio_content_html); ?>
-                                    </div>
-                                <?php endif; ?>
+                                <span class="news-section__bar municipalidad-bio__bar" aria-hidden="true">
+                                    <span class="news-section__bar-segment news-section__bar-segment--one"></span>
+                                    <span class="news-section__bar-segment news-section__bar-segment--two"></span>
+                                    <span class="news-section__bar-segment news-section__bar-segment--three"></span>
+                                    <span class="news-section__bar-segment news-section__bar-segment--four"></span>
+                                    <span class="news-section__bar-segment news-section__bar-segment--five"></span>
+                                </span>
 
                                 <?php if ('' !== trim($signer_name) || '' !== trim($signer_role)) : ?>
                                     <div class="municipalidad-bio__signature">
@@ -140,6 +142,12 @@ get_header();
                                         <?php if ('' !== trim($signer_role)) : ?>
                                             <p class="municipalidad-bio__role"><?php echo esc_html($signer_role); ?></p>
                                         <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if ('' !== trim($bio_content_html)) : ?>
+                                    <div class="municipalidad-bio__text">
+                                        <?php echo wp_kses_post($bio_content_html); ?>
                                     </div>
                                 <?php endif; ?>
                             </div>

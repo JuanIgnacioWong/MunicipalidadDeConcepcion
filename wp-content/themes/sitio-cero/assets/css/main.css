@@ -1141,7 +1141,7 @@ img {
 
 .news-section__bar {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     height: 6px;
     width: 100%;
     margin-bottom: 0.55rem;
@@ -1153,23 +1153,17 @@ img {
 }
 
 .news-section__bar-segment--one {
-    background: #2bb673;
+    background: #fae04b;
 }
 
 .news-section__bar-segment--two {
-    background: #00bfa6;
+    background: #142287;
 }
 
-.news-section__bar-segment--three {
-    background: #f2994a;
-}
-
-.news-section__bar-segment--four {
-    background: #8e44ad;
-}
-
+.news-section__bar-segment--three,
+.news-section__bar-segment--four,
 .news-section__bar-segment--five {
-    background: #2d9cdb;
+    display: none;
 }
 
 .news-section__heading {
@@ -1536,6 +1530,7 @@ img {
     font-size: clamp(0.95rem, 1.08vw, 1.1rem);
     line-height: 1.28;
     margin: 0;
+    font-weight: 500;
 }
 
 .news-card__title a:hover,
@@ -2758,9 +2753,13 @@ img {
 
 .municipalidad-bio__body {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .municipalidad-bio__title {
+    display: none;
     margin: 0 0 0.75rem;
     font-size: clamp(1.4rem, 2.8vw, 2rem);
     color: var(--color-navy);
@@ -2786,26 +2785,35 @@ img {
     line-height: 1.72;
 }
 
+.municipalidad-bio__bar {
+    max-width: 360px;
+}
+
 .municipalidad-bio__signature {
-    margin-top: 1.1rem;
-    padding-top: 0.85rem;
-    border-top: 1px solid var(--color-line);
+    margin: 0 0 1.1rem;
+    padding: 0 0 0.85rem;
+    border-top: 0;
+    border-bottom: 1px solid var(--color-line);
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
 }
 
 .municipalidad-bio__signer {
     margin: 0;
     color: var(--color-navy);
-    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
-    font-weight: 400;
-    font-size: clamp(1.08rem, 1.9vw, 1.42rem);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 2.62vw, 1.96rem);
     line-height: 1;
 }
 
 .municipalidad-bio__role {
     margin: 0.16rem 0 0;
     color: var(--color-muted);
-    font-weight: 600;
-    font-size: clamp(0.9rem, 1.15vw, 1.02rem);
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-weight: 200;
+    font-size: clamp(1.24rem, 1.59vw, 1.4rem);
     line-height: 1.28;
 }
 
