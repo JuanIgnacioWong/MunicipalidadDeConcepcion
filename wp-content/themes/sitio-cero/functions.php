@@ -1959,13 +1959,58 @@ function sitio_cero_get_default_municipalidad_pages()
 
 function sitio_cero_get_default_concejo_members()
 {
-    $members = array();
+    $base_url = trailingslashit(get_template_directory_uri()) . 'assets/images/concejo';
+    $default_images = array(
+        $base_url . '/concejo-01.svg',
+        $base_url . '/concejo-02.svg',
+        $base_url . '/concejo-03.svg',
+        $base_url . '/concejo-04.svg',
+        $base_url . '/concejo-05.svg',
+        $base_url . '/concejo-06.svg',
+        $base_url . '/concejo-07.svg',
+        $base_url . '/concejo-08.svg',
+        $base_url . '/concejo-09.svg',
+        $base_url . '/concejo-10.svg',
+    );
 
-    for ($index = 1; $index <= 10; $index++) {
+    $names = array(
+        'José Eduardo Piña Faúndez (Republicano)',
+        'Oscar Iván Ramírez Romero (PDC)',
+        'Daniel Pacheco Ponce (PSC)',
+        'Claudia Arriagada Parra (Igualdad)',
+        'Olimpia Fernanda Riveros Ravelo (PCCH)',
+        'Andrea del Pilar Estrada Arteaga (Republicano)',
+        'Christian Paulsen Garbarino (UDI)',
+        'Francisca Collipal Lagos (PSC)',
+        'Eric Alexis Riquelme Sanhueza (FA)',
+        'Miguel Ángel Berríos Garate (RN)',
+    );
+
+    $image_overrides = array(
+        1 => $default_images[0],
+        2 => 'https://www.pdc.cl/wp-content/uploads/2024/12/OSCAR-RAMIREZ-ROMERO-CONCEJAL-CONCEPCION.png',
+        3 => 'https://socialcristiano.cl/wp-content/uploads/2025/03/images.jpg',
+        4 => 'https://i1.sndcdn.com/artworks-000059564033-kgmnlg-t1080x1080.jpg',
+        5 => 'https://assets.diarioconcepcion.cl/2024/04/pag-5-Olimpia-Riveros-candidata-a-alcaldesa-de-Concepcion-foto-carolina-e1712215694190-850x500.jpg',
+        6 => $default_images[5],
+        7 => 'https://static.wixstatic.com/media/e9676d_313b71a28e2b4835a7a9f8fd13ede236~mv2.jpg/v1/crop/x_0%2Cy_6%2Cw_718%2Ch_707/fill/w_195%2Ch_192%2Cal_c%2Cq_80%2Cusm_0.66_1.00_0.01%2Cenc_avif%2Cquality_auto/CPaulsenfoto_edited.jpg',
+        8 => 'https://socialcristiano.cl/wp-content/uploads/2025/03/Francisca-Collipal-e1742306962434.jpeg',
+        9 => $default_images[8],
+        10 => $default_images[9],
+    );
+
+    $members = array();
+    foreach ($names as $index => $name) {
+        $position = $index + 1;
+        $image_url = isset($image_overrides[$position]) ? $image_overrides[$position] : $default_images[$index];
         $members[] = array(
-            'name'      => sprintf(__('Concejal %d', 'sitio-cero'), $index),
-            'email'     => 'concejal' . $index . '@municipio.cl',
-            'image_url' => '',
+            'name'      => $name,
+            'email'     => 'concejal' . $position . '@municipio.cl',
+            'image_url' => esc_url_raw($image_url),
+            'facebook'  => '',
+            'instagram' => '',
+            'x'         => '',
+            'whatsapp'  => '',
         );
     }
 
@@ -1978,7 +2023,7 @@ function sitio_cero_seed_default_municipalidad_pages()
         return;
     }
 
-    $seed_version = '2';
+    $seed_version = '4';
     $already_seeded_version = (string) get_option('sitio_cero_default_municipalidad_seeded_version', '');
     if ($seed_version === $already_seeded_version) {
         return;
@@ -2070,8 +2115,50 @@ function sitio_cero_seed_default_municipalidad_pages()
             }
 
             $concejo_members = get_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_members', true);
+            $needs_refresh = false;
             if (!is_array($concejo_members) || empty($concejo_members)) {
+                $needs_refresh = true;
+            } else {
+                $placeholder_count = 0;
+                foreach ($concejo_members as $member) {
+                    $member_name = is_array($member) && isset($member['name']) ? trim((string) $member['name']) : '';
+                    if ('' === $member_name || preg_match('/^Concejal\\s+\\d+$/iu', $member_name)) {
+                        $placeholder_count++;
+                    }
+                }
+                if ($placeholder_count === count($concejo_members)) {
+                    $needs_refresh = true;
+                }
+            }
+
+            if ($needs_refresh) {
                 update_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_members', sitio_cero_get_default_concejo_members());
+            } else {
+                $has_any_image = false;
+                foreach ($concejo_members as $member) {
+                    if (is_array($member) && !empty($member['image_url'])) {
+                        $has_any_image = true;
+                        break;
+                    }
+                }
+
+                if (!$has_any_image) {
+                    $defaults = sitio_cero_get_default_concejo_members();
+                    $updated_members = array();
+                    foreach ($concejo_members as $index => $member) {
+                        if (!is_array($member)) {
+                            continue;
+                        }
+
+                        $image_url = isset($defaults[$index]['image_url']) ? (string) $defaults[$index]['image_url'] : '';
+                        $member['image_url'] = '' === trim((string) ($member['image_url'] ?? '')) ? $image_url : $member['image_url'];
+                        $updated_members[] = $member;
+                    }
+
+                    if (!empty($updated_members)) {
+                        update_post_meta((int) $post_id, 'sitio_cero_municipalidad_concejo_members', $updated_members);
+                    }
+                }
             }
         }
     }
@@ -2212,14 +2299,15 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
         </label>
     </p>
 
-    <p class="description"><?php esc_html_e('Edita nombre, correo e imagen horizontal de cada integrante. La imagen acepta URL (por ejemplo desde Biblioteca de Medios).', 'sitio-cero'); ?></p>
+    <p class="description"><?php esc_html_e('Edita nombre, correo, redes sociales, WhatsApp e imagen vertical de cada integrante. La imagen acepta URL (por ejemplo desde Biblioteca de Medios).', 'sitio-cero'); ?></p>
 
     <table class="widefat striped" style="max-width:100%;">
         <thead>
             <tr>
-                <th style="width:38%;"><?php esc_html_e('Nombre', 'sitio-cero'); ?></th>
-                <th style="width:30%;"><?php esc_html_e('Correo electronico', 'sitio-cero'); ?></th>
-                <th style="width:32%;"><?php esc_html_e('URL imagen (horizontal)', 'sitio-cero'); ?></th>
+                <th style="width:26%;"><?php esc_html_e('Nombre', 'sitio-cero'); ?></th>
+                <th style="width:20%;"><?php esc_html_e('Correo electronico', 'sitio-cero'); ?></th>
+                <th style="width:30%;"><?php esc_html_e('Redes y WhatsApp', 'sitio-cero'); ?></th>
+                <th style="width:24%;"><?php esc_html_e('URL imagen (vertical)', 'sitio-cero'); ?></th>
             </tr>
         </thead>
         <tbody>
@@ -2228,6 +2316,10 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
                 $member_name = is_array($member) && isset($member['name']) ? (string) $member['name'] : '';
                 $member_email = is_array($member) && isset($member['email']) ? (string) $member['email'] : '';
                 $member_image_url = is_array($member) && isset($member['image_url']) ? (string) $member['image_url'] : '';
+                $member_facebook = is_array($member) && isset($member['facebook']) ? (string) $member['facebook'] : '';
+                $member_instagram = is_array($member) && isset($member['instagram']) ? (string) $member['instagram'] : '';
+                $member_x = is_array($member) && isset($member['x']) ? (string) $member['x'] : '';
+                $member_whatsapp = is_array($member) && isset($member['whatsapp']) ? (string) $member['whatsapp'] : '';
                 ?>
                 <tr>
                     <td>
@@ -2253,6 +2345,50 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
                         >
                     </td>
                     <td>
+                        <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:6px;">
+                            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
+                                <?php esc_html_e('Facebook', 'sitio-cero'); ?>
+                                <input
+                                    type="url"
+                                    name="sitio_cero_municipalidad_concejo_member_facebook[]"
+                                    class="widefat"
+                                    value="<?php echo esc_attr(esc_url_raw($member_facebook)); ?>"
+                                    placeholder="https://facebook.com/usuario"
+                                >
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
+                                <?php esc_html_e('Instagram', 'sitio-cero'); ?>
+                                <input
+                                    type="url"
+                                    name="sitio_cero_municipalidad_concejo_member_instagram[]"
+                                    class="widefat"
+                                    value="<?php echo esc_attr(esc_url_raw($member_instagram)); ?>"
+                                    placeholder="https://instagram.com/usuario"
+                                >
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
+                                <?php esc_html_e('X / Twitter', 'sitio-cero'); ?>
+                                <input
+                                    type="url"
+                                    name="sitio_cero_municipalidad_concejo_member_x[]"
+                                    class="widefat"
+                                    value="<?php echo esc_attr(esc_url_raw($member_x)); ?>"
+                                    placeholder="https://x.com/usuario"
+                                >
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
+                                <?php esc_html_e('WhatsApp', 'sitio-cero'); ?>
+                                <input
+                                    type="text"
+                                    name="sitio_cero_municipalidad_concejo_member_whatsapp[]"
+                                    class="widefat"
+                                    value="<?php echo esc_attr($member_whatsapp); ?>"
+                                    placeholder="https://wa.me/569..."
+                                >
+                            </label>
+                        </div>
+                    </td>
+                    <td>
                         <label for="sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>" class="screen-reader-text"><?php esc_html_e('URL imagen', 'sitio-cero'); ?></label>
                         <input
                             id="sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>"
@@ -2271,6 +2407,25 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
         </tbody>
     </table>
     <?php
+}
+
+function sitio_cero_normalize_whatsapp_url($raw)
+{
+    $raw = trim((string) $raw);
+    if ('' === $raw) {
+        return '';
+    }
+
+    if (wp_http_validate_url($raw)) {
+        return esc_url_raw($raw);
+    }
+
+    $digits = preg_replace('/\\D+/', '', $raw);
+    if ('' === $digits) {
+        return '';
+    }
+
+    return 'https://wa.me/' . $digits;
 }
 
 function sitio_cero_save_municipalidad_bio_meta($post_id)
@@ -2347,6 +2502,18 @@ function sitio_cero_save_municipalidad_bio_meta($post_id)
     $member_images = isset($_POST['sitio_cero_municipalidad_concejo_member_image'])
         ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_image'])
         : array();
+    $member_facebooks = isset($_POST['sitio_cero_municipalidad_concejo_member_facebook'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_facebook'])
+        : array();
+    $member_instagrams = isset($_POST['sitio_cero_municipalidad_concejo_member_instagram'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_instagram'])
+        : array();
+    $member_x_urls = isset($_POST['sitio_cero_municipalidad_concejo_member_x'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_x'])
+        : array();
+    $member_whatsapps = isset($_POST['sitio_cero_municipalidad_concejo_member_whatsapp'])
+        ? wp_unslash($_POST['sitio_cero_municipalidad_concejo_member_whatsapp'])
+        : array();
 
     if (!is_array($member_names)) {
         $member_names = array();
@@ -2357,6 +2524,18 @@ function sitio_cero_save_municipalidad_bio_meta($post_id)
     if (!is_array($member_images)) {
         $member_images = array();
     }
+    if (!is_array($member_facebooks)) {
+        $member_facebooks = array();
+    }
+    if (!is_array($member_instagrams)) {
+        $member_instagrams = array();
+    }
+    if (!is_array($member_x_urls)) {
+        $member_x_urls = array();
+    }
+    if (!is_array($member_whatsapps)) {
+        $member_whatsapps = array();
+    }
 
     $members = array();
     $max_members = 10;
@@ -2364,12 +2543,20 @@ function sitio_cero_save_municipalidad_bio_meta($post_id)
         $name_raw = isset($member_names[$index]) ? (string) $member_names[$index] : '';
         $email_raw = isset($member_emails[$index]) ? (string) $member_emails[$index] : '';
         $image_raw = isset($member_images[$index]) ? (string) $member_images[$index] : '';
+        $facebook_raw = isset($member_facebooks[$index]) ? (string) $member_facebooks[$index] : '';
+        $instagram_raw = isset($member_instagrams[$index]) ? (string) $member_instagrams[$index] : '';
+        $x_raw = isset($member_x_urls[$index]) ? (string) $member_x_urls[$index] : '';
+        $whatsapp_raw = isset($member_whatsapps[$index]) ? (string) $member_whatsapps[$index] : '';
 
         $name = sanitize_text_field($name_raw);
         $email = sanitize_email($email_raw);
         $image_url = esc_url_raw($image_raw);
+        $facebook = esc_url_raw($facebook_raw);
+        $instagram = esc_url_raw($instagram_raw);
+        $x_url = esc_url_raw($x_raw);
+        $whatsapp = sitio_cero_normalize_whatsapp_url($whatsapp_raw);
 
-        if ('' === trim($name) && '' === trim($email) && '' === trim($image_url)) {
+        if ('' === trim($name) && '' === trim($email) && '' === trim($image_url) && '' === trim($facebook) && '' === trim($instagram) && '' === trim($x_url) && '' === trim($whatsapp)) {
             continue;
         }
 
@@ -2377,6 +2564,10 @@ function sitio_cero_save_municipalidad_bio_meta($post_id)
             'name'      => $name,
             'email'     => $email,
             'image_url' => $image_url,
+            'facebook'  => $facebook,
+            'instagram' => $instagram,
+            'x'         => $x_url,
+            'whatsapp'  => $whatsapp,
         );
     }
 

@@ -164,9 +164,34 @@ get_header();
                                     $member_name = isset($member['name']) ? trim((string) $member['name']) : '';
                                     $member_email = isset($member['email']) ? trim((string) $member['email']) : '';
                                     $member_image_url = isset($member['image_url']) ? trim((string) $member['image_url']) : '';
+                                    $member_facebook = isset($member['facebook']) ? trim((string) $member['facebook']) : '';
+                                    $member_instagram = isset($member['instagram']) ? trim((string) $member['instagram']) : '';
+                                    $member_x = isset($member['x']) ? trim((string) $member['x']) : '';
+                                    $member_whatsapp = isset($member['whatsapp']) ? trim((string) $member['whatsapp']) : '';
+                                    if (function_exists('sitio_cero_normalize_whatsapp_url')) {
+                                        $member_whatsapp = sitio_cero_normalize_whatsapp_url($member_whatsapp);
+                                    }
                                     if ('' === $member_name) {
                                         $member_name = __('Nombre por definir', 'sitio-cero');
                                     }
+                                    $socials = array(
+                                        'facebook'  => $member_facebook,
+                                        'instagram' => $member_instagram,
+                                        'x'         => $member_x,
+                                        'whatsapp'  => $member_whatsapp,
+                                    );
+                                    $social_labels = array(
+                                        'facebook'  => __('Facebook', 'sitio-cero'),
+                                        'instagram' => __('Instagram', 'sitio-cero'),
+                                        'x'         => __('X', 'sitio-cero'),
+                                        'whatsapp'  => __('WhatsApp', 'sitio-cero'),
+                                    );
+                                    $social_icons = array(
+                                        'facebook'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H7v3h3v5h3v-5h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>',
+                                        'instagram' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6.5-2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>',
+                                        'x'         => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 3H21l-6.5 7.4L22 21h-6.2l-4.8-6-5.2 6H3.7l7-8L2 3h6.3l4.3 5.4L18.9 3z"/></svg>',
+                                        'whatsapp'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3.4 19.8L2 22l2.3-1.3A11 11 0 0 0 20.5 3.5zM12 21a9 9 0 0 1-4.6-1.3l-.3-.2-2.7 1.4.9-2.9-.2-.3A9 9 0 1 1 12 21zm5-6.1c-.3-.1-1.7-.8-2-1-.3-.1-.5-.1-.7.1l-.8 1c-.2.2-.3.2-.6.1-1.7-.7-2.8-2.2-3-2.5-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.1-.3.2-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.7.3-.2.2-1 1-1 2.4 0 1.4 1 2.8 1.1 3 .1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.2-.7.2-1.3.1-1.4-.1-.1-.3-.2-.6-.3z"/></svg>',
+                                    );
                                     ?>
                                     <article class="concejo-team__card">
                                         <figure class="concejo-team__media">
@@ -177,6 +202,32 @@ get_header();
                                             <?php endif; ?>
                                         </figure>
                                         <h3 class="concejo-team__name"><?php echo esc_html($member_name); ?></h3>
+                                        <?php
+                                        $has_socials = false;
+                                        foreach ($socials as $social_url) {
+                                            if ('' !== trim((string) $social_url)) {
+                                                $has_socials = true;
+                                                break;
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($has_socials) : ?>
+                                            <div class="concejo-team__socials">
+                                                <?php foreach ($socials as $social_key => $social_url) : ?>
+                                                    <?php
+                                                    $social_url = trim((string) $social_url);
+                                                    if ('' === $social_url) {
+                                                        continue;
+                                                    }
+                                                    $label = isset($social_labels[$social_key]) ? $social_labels[$social_key] : $social_key;
+                                                    $icon = isset($social_icons[$social_key]) ? $social_icons[$social_key] : '';
+                                                    ?>
+                                                    <a class="concejo-team__social concejo-team__social--<?php echo esc_attr($social_key); ?>" href="<?php echo esc_url($social_url); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr($label); ?>">
+                                                        <?php echo $icon; ?>
+                                                    </a>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
                                         <?php if ('' !== $member_email) : ?>
                                             <a class="concejo-team__email" href="mailto:<?php echo antispambot(esc_attr($member_email)); ?>">
                                                 <?php echo esc_html(antispambot($member_email)); ?>
