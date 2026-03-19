@@ -2,7 +2,7 @@
 get_header();
 ?>
 
-<main id="content" class="site-main section container content-single direccion-municipal-page">
+<main id="content" class="site-main dm-single">
     <?php if (have_posts()) : while (have_posts()) : the_post(); ?>
         <?php
         $post_id = get_the_ID();
@@ -43,6 +43,12 @@ get_header();
             $map_src = $clean_map_url;
         } elseif ('' !== trim($direccion)) {
             $map_src = 'https://www.google.com/maps?q=' . rawurlencode($direccion) . '&output=embed';
+        }
+        $map_link = '';
+        if ('' !== $clean_map_url) {
+            $map_link = $clean_map_url;
+        } elseif ('' !== trim($direccion)) {
+            $map_link = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($direccion);
         }
 
         $recursos_titulo = get_post_meta($post_id, 'sitio_cero_direccion_recursos_titulo', true);
@@ -150,142 +156,224 @@ get_header();
             $custom_html_output = do_shortcode(wp_kses($custom_html, $allowed_html));
         }
 
+        $has_content = '' !== trim((string) get_the_content());
+        $has_org_data = '' !== trim($director) || '' !== trim($profesion) || !empty($telefonos) || '' !== trim($email) || '' !== trim($direccion);
+        $has_map = '' !== $map_src;
+        $has_resources = !empty($resource_blocks_view);
+        $has_custom = '' !== $custom_html_output;
         ?>
 
-        <article id="direccion-municipal-<?php the_ID(); ?>" <?php post_class('direccion-municipal-single'); ?>>
-            <header class="section__header direccion-municipal-single__header">
-                <p class="direccion-municipal-single__kicker"><?php esc_html_e('Direccion municipal', 'sitio-cero'); ?></p>
-                <h1><?php the_title(); ?></h1>
-            </header>
-
-            <?php if ('' !== trim((string) get_the_content())) : ?>
-                <section class="direccion-municipal-content content-body">
-                    <?php the_content(); ?>
-                </section>
-            <?php endif; ?>
-
-            <div class="direccion-municipal-single__intro">
-                <section class="direccion-municipal-org">
-                    <h2><?php esc_html_e('Organizacion', 'sitio-cero'); ?></h2>
-                    <ul class="direccion-municipal-org__list">
-                        <?php if ('' !== trim($director)) : ?>
-                            <li data-type="director">
-                                <span class="direccion-municipal-org__label"><?php esc_html_e('Director:', 'sitio-cero'); ?></span>
-                                <span><?php echo esc_html($director); ?></span>
-                            </li>
-                        <?php endif; ?>
-
-                        <?php if ('' !== trim($profesion)) : ?>
-                            <li data-type="profesion">
-                                <span class="direccion-municipal-org__label"><?php esc_html_e('Profesion:', 'sitio-cero'); ?></span>
-                                <span><?php echo esc_html($profesion); ?></span>
-                            </li>
-                        <?php endif; ?>
-
-                        <?php if (!empty($telefonos)) : ?>
-                            <li data-type="telefonos">
-                                <span class="direccion-municipal-org__label"><?php esc_html_e('Telefonos:', 'sitio-cero'); ?></span>
-                                <span class="direccion-municipal-org__phones">
-                                    <?php foreach ($telefonos as $telefono) : ?>
-                                        <?php
-                                        $phone_text = sanitize_text_field((string) $telefono);
-                                        if ('' === trim($phone_text)) {
-                                            continue;
-                                        }
-                                        $phone_href = preg_replace('/[^0-9+]/', '', $phone_text);
-                                        ?>
-                                        <?php if ('' !== trim((string) $phone_href)) : ?>
-                                            <a class="direccion-municipal-org__chip" href="tel:<?php echo esc_attr($phone_href); ?>"><?php echo esc_html($phone_text); ?></a>
-                                        <?php else : ?>
-                                            <span class="direccion-municipal-org__chip"><?php echo esc_html($phone_text); ?></span>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </span>
-                            </li>
-                        <?php endif; ?>
-
-                        <?php if ('' !== trim($email)) : ?>
-                            <li data-type="email">
-                                <span class="direccion-municipal-org__label"><?php esc_html_e('Email:', 'sitio-cero'); ?></span>
-                                <a class="direccion-municipal-org__mail" href="mailto:<?php echo esc_attr(sanitize_email($email)); ?>"><?php echo esc_html($email); ?></a>
-                            </li>
-                        <?php endif; ?>
-
-                        <?php if ('' !== trim($direccion)) : ?>
-                            <li data-type="direccion">
-                                <span class="direccion-municipal-org__label"><?php esc_html_e('Direccion:', 'sitio-cero'); ?></span>
-                                <span><?php echo esc_html($direccion); ?></span>
-                            </li>
-                        <?php endif; ?>
-                    </ul>
-                </section>
-
-                <aside class="direccion-municipal-map">
-                    <h2><?php esc_html_e('Mapa', 'sitio-cero'); ?></h2>
-                    <?php if ('' !== $map_src) : ?>
-                        <iframe class="direccion-municipal-map__iframe" src="<?php echo esc_url($map_src); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
-                    <?php else : ?>
-                        <p class="direccion-municipal-map__empty"><?php esc_html_e('Agrega una direccion o URL de mapa para mostrar la georeferencia.', 'sitio-cero'); ?></p>
+        <article id="direccion-municipal-<?php the_ID(); ?>" <?php post_class('dm-page pc-page'); ?>>
+            <section class="pc-hero">
+                <div class="pc-hero__inner dm-hero">
+                    <p class="pc-hero__eyebrow"><?php esc_html_e('Direcciones Municipales', 'sitio-cero'); ?></p>
+                    <h1 class="pc-hero__title"><?php the_title(); ?></h1>
+                    <?php if ('' !== trim($director) || '' !== trim($email) || !empty($telefonos)) : ?>
+                        <div class="dm-hero__meta">
+                            <?php if ('' !== trim($director)) : ?>
+                                <span class="dm-chip"><?php echo esc_html__('Director:', 'sitio-cero') . ' ' . esc_html($director); ?></span>
+                            <?php endif; ?>
+                            <?php if ('' !== trim($email)) : ?>
+                                <a class="dm-chip dm-chip--link" href="mailto:<?php echo esc_attr(sanitize_email($email)); ?>"><?php echo esc_html($email); ?></a>
+                            <?php endif; ?>
+                            <?php if (!empty($telefonos)) : ?>
+                                <?php foreach ($telefonos as $telefono) : ?>
+                                    <?php
+                                    $phone_text = sanitize_text_field((string) $telefono);
+                                    if ('' === trim($phone_text)) {
+                                        continue;
+                                    }
+                                    $phone_href = preg_replace('/[^0-9+]/', '', $phone_text);
+                                    ?>
+                                    <?php if ('' !== trim((string) $phone_href)) : ?>
+                                        <a class="dm-chip dm-chip--link" href="tel:<?php echo esc_attr($phone_href); ?>"><?php echo esc_html($phone_text); ?></a>
+                                    <?php else : ?>
+                                        <span class="dm-chip"><?php echo esc_html($phone_text); ?></span>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                            <?php if ('' !== trim($map_link)) : ?>
+                                <a class="dm-chip dm-chip--icon" href="<?php echo esc_url($map_link); ?>" target="_blank" rel="noopener">
+                                    <span class="material-symbols-rounded" aria-hidden="true">location_on</span>
+                                    <span><?php esc_html_e('Mapa', 'sitio-cero'); ?></span>
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     <?php endif; ?>
-                </aside>
-            </div>
+                </div>
+            </section>
 
-            <?php if (!empty($resource_blocks_view)) : ?>
-                <section class="direccion-municipal-accordion-wrap">
-                    <h2><?php echo esc_html('' !== trim($recursos_titulo) ? $recursos_titulo : __('Documentos y archivos', 'sitio-cero')); ?></h2>
-                    <div class="aviso-single-layout__left">
-                        <?php foreach ($resource_blocks_view as $block) : ?>
-                            <?php
-                            if (!is_array($block)) {
-                                continue;
-                            }
-                            $block_title = isset($block['title']) ? sanitize_text_field((string) $block['title']) : '';
-                            $block_type = isset($block['type']) ? sanitize_key((string) $block['type']) : 'documentos';
-                            $block_html = isset($block['html']) ? (string) $block['html'] : '';
-                            $block_items = isset($block['items']) && is_array($block['items']) ? $block['items'] : array();
-                            ?>
-                            <section class="aviso-single-block">
-                                <h2><?php echo esc_html($block_title); ?></h2>
-                                <?php if ('' !== trim($block_html)) : ?>
-                                    <div class="aviso-single-block__content">
-                                        <?php echo $block_html; ?>
-                                    </div>
-                                <?php endif; ?>
-                                <?php if (!empty($block_items)) : ?>
-                                    <ul class="aviso-single-list">
-                                        <?php foreach ($block_items as $item) : ?>
-                                            <?php if (!is_array($item) || empty($item['url'])) {
-                                                continue;
-                                            } ?>
-                                            <?php
-                                            $icon_key = isset($item['icon']) ? (string) $item['icon'] : '';
-                                            if ('' === $icon_key && function_exists('sitio_cero_detect_aviso_file_icon_by_url')) {
-                                                $icon_key = sitio_cero_detect_aviso_file_icon_by_url((string) $item['url']);
-                                            }
-                                            $icon_key = is_string($icon_key) ? $icon_key : 'file';
-                                            $icon_symbol = function_exists('sitio_cero_get_aviso_file_icon_symbol')
-                                                ? sitio_cero_get_aviso_file_icon_symbol($icon_key)
-                                                : 'attach_file';
-                                            $fallback_label = 'archivos' === $block_type ? 'Archivo' : 'Documento';
-                                            ?>
-                                            <li>
-                                                <a class="aviso-single-file-btn aviso-single-file-btn--<?php echo esc_attr($icon_key); ?>" href="<?php echo esc_url($item['url']); ?>" target="_blank" rel="noopener noreferrer">
-                                                    <span class="material-symbols-rounded aviso-single-file-btn__icon" aria-hidden="true"><?php echo esc_html($icon_symbol); ?></span>
-                                                    <span class="aviso-single-file-btn__text"><?php echo esc_html(isset($item['label']) ? (string) $item['label'] : $fallback_label); ?></span>
-                                                </a>
-                                            </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                <?php endif; ?>
-                            </section>
-                        <?php endforeach; ?>
+            <section class="pc-subnav" aria-label="<?php esc_attr_e('Indice de contenidos', 'sitio-cero'); ?>">
+                <div class="pc-subnav__inner">
+                    <?php if ($has_content) : ?>
+                        <a class="pc-subnav__link" href="#descripcion"><?php esc_html_e('Descripcion', 'sitio-cero'); ?></a>
+                    <?php endif; ?>
+                    <?php if ($has_org_data || $has_map) : ?>
+                        <a class="pc-subnav__link" href="#organizacion"><?php esc_html_e('Organizacion', 'sitio-cero'); ?></a>
+                    <?php endif; ?>
+                    <?php if ($has_resources) : ?>
+                        <a class="pc-subnav__link" href="#recursos"><?php echo esc_html('' !== trim($recursos_titulo) ? $recursos_titulo : __('Recursos', 'sitio-cero')); ?></a>
+                    <?php endif; ?>
+                    <?php if ($has_custom) : ?>
+                        <a class="pc-subnav__link" href="#extra"><?php esc_html_e('Informacion adicional', 'sitio-cero'); ?></a>
+                    <?php endif; ?>
+                </div>
+            </section>
+
+            <?php if ($has_content) : ?>
+                <section id="descripcion" class="pc-section pc-section--paper">
+                    <div class="pc-section__inner">
+                        <header class="pc-section__header">
+                            <p class="pc-kicker"><?php esc_html_e('Perfil', 'sitio-cero'); ?></p>
+                            <h2><?php esc_html_e('Descripcion general', 'sitio-cero'); ?></h2>
+                        </header>
+                        <div class="pc-flow content-body dm-content">
+                            <?php the_content(); ?>
+                        </div>
                     </div>
                 </section>
             <?php endif; ?>
 
-            <?php if ('' !== $custom_html_output) : ?>
-                <section class="direccion-municipal-custom content-body">
-                    <?php echo $custom_html_output; ?>
+            <?php if ($has_org_data || $has_map) : ?>
+                <section id="organizacion" class="pc-section pc-section--soft">
+                    <div class="pc-section__inner">
+                        <header class="pc-section__header">
+                            <p class="pc-kicker"><?php esc_html_e('Organizacion', 'sitio-cero'); ?></p>
+                            <h2><?php esc_html_e('Equipo y contacto', 'sitio-cero'); ?></h2>
+                        </header>
+                        <div class="pc-columns dm-columns">
+                            <div class="dm-org">
+                                <ul class="dm-org__list">
+                                    <?php if ('' !== trim($director)) : ?>
+                                        <li class="dm-org__item">
+                                            <span class="dm-org__label"><?php esc_html_e('Director', 'sitio-cero'); ?></span>
+                                            <span class="dm-org__value"><?php echo esc_html($director); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php if ('' !== trim($profesion)) : ?>
+                                        <li class="dm-org__item">
+                                            <span class="dm-org__label"><?php esc_html_e('Profesion', 'sitio-cero'); ?></span>
+                                            <span class="dm-org__value"><?php echo esc_html($profesion); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($telefonos)) : ?>
+                                        <li class="dm-org__item">
+                                            <span class="dm-org__label"><?php esc_html_e('Telefonos', 'sitio-cero'); ?></span>
+                                            <span class="dm-org__value dm-org__value--chips">
+                                                <?php foreach ($telefonos as $telefono) : ?>
+                                                    <?php
+                                                    $phone_text = sanitize_text_field((string) $telefono);
+                                                    if ('' === trim($phone_text)) {
+                                                        continue;
+                                                    }
+                                                    $phone_href = preg_replace('/[^0-9+]/', '', $phone_text);
+                                                    ?>
+                                                    <?php if ('' !== trim((string) $phone_href)) : ?>
+                                                        <a class="dm-chip dm-chip--light" href="tel:<?php echo esc_attr($phone_href); ?>"><?php echo esc_html($phone_text); ?></a>
+                                                    <?php else : ?>
+                                                        <span class="dm-chip dm-chip--light"><?php echo esc_html($phone_text); ?></span>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                                <?php if ('' !== trim($map_link)) : ?>
+                                                    <a class="dm-chip dm-chip--light dm-chip--icon" href="<?php echo esc_url($map_link); ?>" target="_blank" rel="noopener">
+                                                        <span class="material-symbols-rounded" aria-hidden="true">location_on</span>
+                                                        <span><?php esc_html_e('Mapa', 'sitio-cero'); ?></span>
+                                                    </a>
+                                                <?php endif; ?>
+                                            </span>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php if ('' !== trim($email)) : ?>
+                                        <li class="dm-org__item">
+                                            <span class="dm-org__label"><?php esc_html_e('Email', 'sitio-cero'); ?></span>
+                                            <span class="dm-org__value"><a class="dm-link" href="mailto:<?php echo esc_attr(sanitize_email($email)); ?>"><?php echo esc_html($email); ?></a></span>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php if ('' !== trim($direccion)) : ?>
+                                        <li class="dm-org__item">
+                                            <span class="dm-org__label"><?php esc_html_e('Direccion', 'sitio-cero'); ?></span>
+                                            <span class="dm-org__value"><?php echo esc_html($direccion); ?></span>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+
+                            <aside id="mapa" class="dm-map">
+                                <h3 class="dm-map__title"><?php esc_html_e('Mapa', 'sitio-cero'); ?></h3>
+                                <?php if ($has_map) : ?>
+                                    <iframe class="dm-map__iframe" src="<?php echo esc_url($map_src); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+                                <?php else : ?>
+                                    <p class="dm-map__empty"><?php esc_html_e('Agrega una direccion o URL de mapa para mostrar la georeferencia.', 'sitio-cero'); ?></p>
+                                <?php endif; ?>
+                            </aside>
+                        </div>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($has_resources) : ?>
+                <section id="recursos" class="pc-section pc-section--paper">
+                    <div class="pc-section__inner">
+                        <header class="pc-section__header">
+                            <p class="pc-kicker"><?php esc_html_e('Recursos', 'sitio-cero'); ?></p>
+                            <h2><?php echo esc_html('' !== trim($recursos_titulo) ? $recursos_titulo : __('Documentos y archivos', 'sitio-cero')); ?></h2>
+                        </header>
+                        <div class="pc-accordion" aria-label="<?php esc_attr_e('Documentos y archivos', 'sitio-cero'); ?>">
+                            <?php foreach ($resource_blocks_view as $block) : ?>
+                                <?php
+                                if (!is_array($block)) {
+                                    continue;
+                                }
+                                $block_title = isset($block['title']) ? sanitize_text_field((string) $block['title']) : '';
+                                $block_html = isset($block['html']) ? (string) $block['html'] : '';
+                                $block_items = isset($block['items']) && is_array($block['items']) ? $block['items'] : array();
+                                if ('' === $block_title && empty($block_items) && '' === trim($block_html)) {
+                                    continue;
+                                }
+                                ?>
+                                <details>
+                                    <summary><?php echo esc_html($block_title); ?></summary>
+                                    <div class="pc-accordion__body pc-flow">
+                                        <?php if ('' !== trim($block_html)) : ?>
+                                            <div class="pc-flow"><?php echo $block_html; ?></div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($block_items)) : ?>
+                                            <ul class="pc-list">
+                                                <?php foreach ($block_items as $item) : ?>
+                                                    <?php if (!is_array($item) || empty($item['url'])) {
+                                                        continue;
+                                                    } ?>
+                                                    <li>
+                                                        <a class="pc-link" href="<?php echo esc_url($item['url']); ?>" target="_blank" rel="noopener noreferrer">
+                                                            <?php echo esc_html(isset($item['label']) ? (string) $item['label'] : __('Documento', 'sitio-cero')); ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php endif; ?>
+                                    </div>
+                                </details>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($has_custom) : ?>
+                <section id="extra" class="pc-section">
+                    <div class="pc-section__inner">
+                        <header class="pc-section__header">
+                            <p class="pc-kicker"><?php esc_html_e('Complemento', 'sitio-cero'); ?></p>
+                            <h2><?php esc_html_e('Informacion adicional', 'sitio-cero'); ?></h2>
+                        </header>
+                        <div class="pc-flow content-body dm-content">
+                            <?php echo $custom_html_output; ?>
+                        </div>
+                    </div>
                 </section>
             <?php endif; ?>
         </article>

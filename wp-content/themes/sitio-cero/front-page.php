@@ -123,7 +123,7 @@ get_header();
                 <div class="col-lg-4 col-sm-12 servicios p-md-4 px-0 pb-4 pt-2 llamados">
                     <h3 class="hero-info-title">
                         <span class="material-symbols-rounded hero-info-title__icon" aria-hidden="true">info</span>
-                        <span><?php esc_html_e('Informacion de', 'sitio-cero'); ?></span>
+                        <span><?php esc_html_e('Información', 'sitio-cero'); ?></span>
                     </h3>
                     <nav class="navbar navbar-default navbar-expand-lg pt-md-3 p-0">
                         <div class="collapse navbar-collapse text-center text-md-start show" id="quiero-info">

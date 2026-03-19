@@ -1939,6 +1939,273 @@ function sitio_cero_register_municipalidad_post_type()
 }
 add_action('init', 'sitio_cero_register_municipalidad_post_type');
 
+function sitio_cero_register_participacion_ciudadana_post_type()
+{
+    $labels = array(
+        'name'               => __('Participacion C', 'sitio-cero'),
+        'singular_name'      => __('Participacion C', 'sitio-cero'),
+        'menu_name'          => __('Participacion C', 'sitio-cero'),
+        'name_admin_bar'     => __('Participacion C', 'sitio-cero'),
+        'add_new'            => __('Agregar nueva', 'sitio-cero'),
+        'add_new_item'       => __('Agregar participacion C', 'sitio-cero'),
+        'new_item'           => __('Nueva participacion C', 'sitio-cero'),
+        'edit_item'          => __('Editar participacion C', 'sitio-cero'),
+        'view_item'          => __('Ver participacion C', 'sitio-cero'),
+        'all_items'          => __('Participacion C', 'sitio-cero'),
+        'search_items'       => __('Buscar participacion C', 'sitio-cero'),
+        'not_found'          => __('No se encontraron registros.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay registros en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'participacion_c',
+        array(
+            'labels'            => $labels,
+            'public'            => true,
+            'show_ui'           => true,
+            'show_in_menu'      => true,
+            'show_in_admin_bar' => true,
+            'show_in_nav_menus' => true,
+            'show_in_rest'      => true,
+            'hierarchical'      => false,
+            'has_archive'       => false,
+            'rewrite'           => array('slug' => 'participacion-ciudadana'),
+            'menu_position'     => 26,
+            'menu_icon'         => 'dashicons-groups',
+            'supports'          => array('title', 'editor', 'revisions', 'thumbnail'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_participacion_ciudadana_post_type');
+
+function sitio_cero_get_participacion_ciudadana_content()
+{
+    $content_file = get_template_directory() . '/template-parts/participacion-ciudadana-content.html';
+    if (!file_exists($content_file)) {
+        return '';
+    }
+
+    $content = file_get_contents($content_file);
+    if (!is_string($content)) {
+        return '';
+    }
+
+    return $content;
+}
+
+function sitio_cero_seed_default_participacion_ciudadana()
+{
+    if (!post_type_exists('participacion_c')) {
+        return;
+    }
+
+    $seed_version = '1';
+    $seed_option = 'sitio_cero_default_participacion_ciudadana_seeded_version';
+    if ($seed_version === (string) get_option($seed_option, '')) {
+        return;
+    }
+
+    $existing_items = get_posts(
+        array(
+            'post_type'      => 'participacion_c',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+
+    if (!empty($existing_items)) {
+        update_option($seed_option, $seed_version);
+        return;
+    }
+
+    $content = sitio_cero_get_participacion_ciudadana_content();
+
+    $post_id = wp_insert_post(
+        array(
+            'post_type'    => 'participacion_c',
+            'post_status'  => 'publish',
+            'post_title'   => __('Participacion C', 'sitio-cero'),
+            'post_name'    => 'participacion-ciudadana',
+            'post_content' => $content,
+        ),
+        true
+    );
+
+    if (is_wp_error($post_id) || !$post_id) {
+        return;
+    }
+
+    update_option($seed_option, $seed_version);
+}
+add_action('init', 'sitio_cero_seed_default_participacion_ciudadana', 49);
+
+function sitio_cero_migrate_participacion_ciudadana_post_type()
+{
+    $migrate_version = '1';
+    $migrate_option = 'sitio_cero_participacion_ciudadana_post_type_migrated';
+    if ($migrate_version === (string) get_option($migrate_option, '')) {
+        return;
+    }
+
+    global $wpdb;
+    if (!isset($wpdb->posts)) {
+        return;
+    }
+
+    $updated = $wpdb->update(
+        $wpdb->posts,
+        array('post_type' => 'participacion_c'),
+        array('post_type' => 'participacion_ciudadana'),
+        array('%s'),
+        array('%s')
+    );
+
+    if (false === $updated) {
+        return;
+    }
+
+    update_option($migrate_option, $migrate_version);
+}
+add_action('init', 'sitio_cero_migrate_participacion_ciudadana_post_type', 48);
+
+function sitio_cero_migrate_participacion_ciudadana_title()
+{
+    if (!post_type_exists('participacion_c')) {
+        return;
+    }
+
+    $migrate_version = '1';
+    $migrate_option = 'sitio_cero_participacion_ciudadana_title_migrated';
+    if ($migrate_version === (string) get_option($migrate_option, '')) {
+        return;
+    }
+
+    $posts = get_posts(
+        array(
+            'post_type'      => 'participacion_c',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => 5,
+            'orderby'        => 'ID',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+        )
+    );
+
+    foreach ($posts as $post) {
+        if (!$post instanceof WP_Post) {
+            continue;
+        }
+
+        $title = (string) $post->post_title;
+        $slug = (string) $post->post_name;
+        if ('participacion-ciudadana' !== $slug && 'participacion-c' !== $slug) {
+            continue;
+        }
+
+        if ('Participación Ciudadana' === $title || 'Participacion ciudadana' === $title || 'Participación ciudadana' === $title) {
+            wp_update_post(
+                array(
+                    'ID'         => (int) $post->ID,
+                    'post_title' => __('Participacion C', 'sitio-cero'),
+                )
+            );
+        }
+    }
+
+    update_option($migrate_option, $migrate_version);
+}
+add_action('init', 'sitio_cero_migrate_participacion_ciudadana_title', 50);
+
+function sitio_cero_migrate_participacion_ciudadana_slug()
+{
+    if (!post_type_exists('participacion_c')) {
+        return;
+    }
+
+    $migrate_version = '2';
+    $migrate_option = 'sitio_cero_participacion_ciudadana_slug_migrated';
+    if ($migrate_version === (string) get_option($migrate_option, '')) {
+        return;
+    }
+
+    $posts = get_posts(
+        array(
+            'post_type'      => 'participacion_c',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'posts_per_page' => 5,
+            'orderby'        => 'ID',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+        )
+    );
+
+    foreach ($posts as $post) {
+        if (!$post instanceof WP_Post) {
+            continue;
+        }
+
+        if ('participacion-c' !== (string) $post->post_name) {
+            continue;
+        }
+
+        wp_update_post(
+            array(
+                'ID'        => (int) $post->ID,
+                'post_name' => 'participacion-ciudadana',
+            )
+        );
+    }
+
+    update_option($migrate_option, $migrate_version);
+}
+add_action('init', 'sitio_cero_migrate_participacion_ciudadana_slug', 51);
+
+function sitio_cero_refresh_participacion_ciudadana_content()
+{
+    if (!post_type_exists('participacion_c')) {
+        return;
+    }
+
+    $content_version = '2';
+    $content_option = 'sitio_cero_participacion_ciudadana_content_version';
+    if ($content_version === (string) get_option($content_option, '')) {
+        return;
+    }
+
+    $content = sitio_cero_get_participacion_ciudadana_content();
+    if (!is_string($content) || '' === trim($content)) {
+        return;
+    }
+
+    $posts = get_posts(
+        array(
+            'post_type'      => 'participacion_c',
+            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
+            'name'           => 'participacion-ciudadana',
+            'posts_per_page' => 1,
+            'no_found_rows'  => true,
+        )
+    );
+
+    foreach ($posts as $post) {
+        if (!$post instanceof WP_Post) {
+            continue;
+        }
+
+        wp_update_post(
+            array(
+                'ID'           => (int) $post->ID,
+                'post_content' => $content,
+            )
+        );
+    }
+
+    update_option($content_option, $content_version);
+}
+add_action('init', 'sitio_cero_refresh_participacion_ciudadana_content', 52);
+
 function sitio_cero_get_default_municipalidad_pages()
 {
     return array(
@@ -2301,6 +2568,12 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
 
     <p class="description"><?php esc_html_e('Edita nombre, correo, redes sociales, WhatsApp e imagen vertical de cada integrante. La imagen acepta URL (por ejemplo desde Biblioteca de Medios).', 'sitio-cero'); ?></p>
 
+    <style>
+        .sitio-cero-concejo-image-preview { margin-top:8px; border:1px dashed #ccd0d4; border-radius:6px; background:#f6f7f7; min-height:120px; display:flex; align-items:center; justify-content:center; padding:6px; }
+        .sitio-cero-concejo-image-preview__img { max-height:160px; max-width:100%; height:auto; width:auto; display:block; }
+        .sitio-cero-concejo-image-placeholder { font-size:12px; color:#646970; }
+    </style>
+
     <table class="widefat striped" style="max-width:100%;">
         <thead>
             <tr>
@@ -2320,6 +2593,9 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
                 $member_instagram = is_array($member) && isset($member['instagram']) ? (string) $member['instagram'] : '';
                 $member_x = is_array($member) && isset($member['x']) ? (string) $member['x'] : '';
                 $member_whatsapp = is_array($member) && isset($member['whatsapp']) ? (string) $member['whatsapp'] : '';
+                $preview_alt = '' !== $member_name
+                    ? sprintf(__('Imagen de %s', 'sitio-cero'), $member_name)
+                    : __('Previsualizacion de imagen', 'sitio-cero');
                 ?>
                 <tr>
                     <td>
@@ -2394,13 +2670,24 @@ function sitio_cero_render_municipalidad_concejo_metabox($post)
                             id="sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>"
                             type="url"
                             name="sitio_cero_municipalidad_concejo_member_image[]"
-                            class="widefat"
+                            class="widefat sitio-cero-concejo-image-url"
                             value="<?php echo esc_attr(esc_url_raw($member_image_url)); ?>"
                             placeholder="https://..."
                         >
                         <button type="button" class="button button-secondary sitio-cero-media-picker" data-target="#sitio_cero_municipalidad_concejo_member_image_<?php echo esc_attr((string) $index); ?>">
                             <?php esc_html_e('Seleccionar desde biblioteca', 'sitio-cero'); ?>
                         </button>
+                        <div class="sitio-cero-concejo-image-preview">
+                            <img
+                                class="sitio-cero-concejo-image-preview__img"
+                                src="<?php echo esc_url($member_image_url); ?>"
+                                alt="<?php echo esc_attr($preview_alt); ?>"
+                                <?php echo '' === $member_image_url ? 'style="display:none;"' : ''; ?>
+                            >
+                            <span class="sitio-cero-concejo-image-placeholder" <?php echo '' !== $member_image_url ? 'style="display:none;"' : ''; ?>>
+                                <?php esc_html_e('Sin imagen', 'sitio-cero'); ?>
+                            </span>
+                        </div>
                     </td>
                 </tr>
             <?php endforeach; ?>
