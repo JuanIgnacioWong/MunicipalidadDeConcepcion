@@ -63,61 +63,6 @@
     text-transform: uppercase;
 }
 
-.sitio-cero-dm-embed-picker {
-    display: grid;
-    gap: 6px;
-}
-
-.sitio-cero-dm-embed-picker__controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    align-items: center;
-}
-
-.sitio-cero-dm-embed-picker .description {
-    margin: 0;
-}
-
-.sitio-cero-dm-accordion {
-    display: grid;
-    gap: 10px;
-}
-
-.sitio-cero-dm-accordion__list {
-    display: grid;
-    gap: 10px;
-}
-
-.sitio-cero-dm-accordion__row {
-    border: 1px solid #d7dde7;
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 10px;
-}
-
-.sitio-cero-dm-accordion__row-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.sitio-cero-dm-accordion__row-head strong {
-    flex: 1;
-}
-
-.sitio-cero-dm-accordion__drag {
-    cursor: move;
-}
-
-.sitio-cero-dm-accordion__row--placeholder {
-    border: 1px dashed #8ca4d2;
-    background: #eef3fb;
-    min-height: 42px;
-    border-radius: 8px;
-}
-
 .sitio-cero-dm-subtabs {
     border-top: 1px solid #dce4f2;
     margin-top: 10px;
@@ -155,7 +100,4 @@
         grid-template-columns: 1fr;
     }
 
-    .sitio-cero-dm-embed-picker__controls {
-        grid-template-columns: 1fr;
-    }
 }

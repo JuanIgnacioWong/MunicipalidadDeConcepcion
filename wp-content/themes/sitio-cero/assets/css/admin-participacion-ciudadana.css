@@ -1,0 +1,49 @@
+.sitio-cero-pc-metabox {
+    display: block;
+}
+
+.sitio-cero-pc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.sitio-cero-pc-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sitio-cero-pc-row {
+    display: grid;
+    grid-template-columns: 1.3fr 1.7fr 0.9fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.sitio-cero-pc-row--stack {
+    grid-template-columns: 1fr;
+    align-items: start;
+}
+
+.sitio-cero-pc-row--stack .button-link-delete {
+    justify-self: flex-start;
+    margin-top: 4px;
+}
+
+.sitio-cero-pc-field label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.sitio-cero-pc-field textarea {
+    width: 100%;
+    min-height: 140px;
+}
+
+@media (max-width: 960px) {
+    .sitio-cero-pc-row {
+        grid-template-columns: 1fr;
+    }
+}

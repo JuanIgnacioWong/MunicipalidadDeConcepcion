@@ -63,77 +63,6 @@
         $(document).trigger('sitio-cero:init-aviso-files', [target]);
     };
 
-    const insertShortcodeInTextarea = ($textarea, shortcode) => {
-        const value = String($textarea.val() || '');
-        const field = $textarea.get(0);
-
-        if (
-            !field
-            || typeof field.selectionStart !== 'number'
-            || typeof field.selectionEnd !== 'number'
-        ) {
-            const needsNewline = value !== '' && !/\n\s*$/.test(value);
-            const nextValue = needsNewline ? `${value}\n${shortcode}` : `${value}${shortcode}`;
-            $textarea.val(nextValue).trigger('input').trigger('change');
-            return;
-        }
-
-        const start = field.selectionStart;
-        const end = field.selectionEnd;
-        const before = value.slice(0, start);
-        const after = value.slice(end);
-
-        let insertion = shortcode;
-        if (before !== '' && !before.endsWith('\n')) {
-            insertion = `\n${insertion}`;
-        }
-        if (after !== '' && !after.startsWith('\n')) {
-            insertion = `${insertion}\n`;
-        }
-
-        const nextValue = `${before}${insertion}${after}`;
-        const cursor = before.length + insertion.length;
-
-        $textarea.val(nextValue).trigger('input').trigger('change');
-        field.focus();
-        field.setSelectionRange(cursor, cursor);
-    };
-
-    const initEmbedShortcodePickers = () => {
-        $(document).on('click', '[data-embed-shortcode-insert]', (event) => {
-            event.preventDefault();
-
-            const $button = $(event.currentTarget);
-            const targetSelector = String($button.attr('data-target') || '').trim();
-            if (targetSelector === '') {
-                return;
-            }
-
-            const $picker = $button.closest('.sitio-cero-dm-embed-picker');
-            const $select = $picker
-                .find(`[data-embed-shortcode-select][data-target="${targetSelector}"]`)
-                .first();
-            if ($select.length === 0) {
-                return;
-            }
-
-            const selectedId = parseInt(String($select.val() || ''), 10);
-            if (!Number.isFinite(selectedId) || selectedId <= 0) {
-                const message = String(config.selectAccordionMessage || 'Selecciona un acordeon para insertarlo.');
-                if (message !== '') {
-                    window.alert(message);
-                }
-                return;
-            }
-
-            const $textarea = $(targetSelector).first();
-            if ($textarea.length === 0) {
-                return;
-            }
-
-            insertShortcodeInTextarea($textarea, `[acordeon id="${selectedId}"]`);
-        });
-    };
 
     const buildResourceBlockFromTemplate = (template, key) => {
         if (!(template instanceof HTMLTemplateElement)) {
@@ -203,7 +132,6 @@
 
     $(() => {
         initPhones();
-        initEmbedShortcodePickers();
         initResourceBlocks();
     });
 })(jQuery);

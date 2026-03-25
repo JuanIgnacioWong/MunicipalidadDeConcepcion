@@ -1103,7 +1103,6 @@ function sitio_cero_enqueue_direccion_municipal_admin_assets($hook_suffix)
             'phoneLabel'             => __('Telefono', 'sitio-cero'),
             'resourceBlockLabel'     => __('Bloque', 'sitio-cero'),
             'removeText'             => __('Quitar', 'sitio-cero'),
-            'selectAccordionMessage' => __('Selecciona un acordeon para insertarlo.', 'sitio-cero'),
         )
     );
 }
@@ -1999,7 +1998,7 @@ function sitio_cero_seed_default_participacion_ciudadana()
         return;
     }
 
-    $seed_version = '1';
+    $seed_version = '2';
     $seed_option = 'sitio_cero_default_participacion_ciudadana_seeded_version';
     if ($seed_version === (string) get_option($seed_option, '')) {
         return;
@@ -2016,11 +2015,13 @@ function sitio_cero_seed_default_participacion_ciudadana()
     );
 
     if (!empty($existing_items)) {
+        $post_id = (int) $existing_items[0];
+        if ($post_id > 0 && !sitio_cero_participacion_ciudadana_has_meta($post_id)) {
+            sitio_cero_set_participacion_ciudadana_defaults($post_id);
+        }
         update_option($seed_option, $seed_version);
         return;
     }
-
-    $content = sitio_cero_get_participacion_ciudadana_content();
 
     $post_id = wp_insert_post(
         array(
@@ -2028,7 +2029,7 @@ function sitio_cero_seed_default_participacion_ciudadana()
             'post_status'  => 'publish',
             'post_title'   => __('Participacion C', 'sitio-cero'),
             'post_name'    => 'participacion-ciudadana',
-            'post_content' => $content,
+            'post_content' => '',
         ),
         true
     );
@@ -2037,6 +2038,7 @@ function sitio_cero_seed_default_participacion_ciudadana()
         return;
     }
 
+    sitio_cero_set_participacion_ciudadana_defaults((int) $post_id);
     update_option($seed_option, $seed_version);
 }
 add_action('init', 'sitio_cero_seed_default_participacion_ciudadana', 49);
@@ -2162,49 +2164,1285 @@ function sitio_cero_migrate_participacion_ciudadana_slug()
 }
 add_action('init', 'sitio_cero_migrate_participacion_ciudadana_slug', 51);
 
-function sitio_cero_refresh_participacion_ciudadana_content()
+function sitio_cero_remove_participacion_ciudadana_editor_support()
 {
     if (!post_type_exists('participacion_c')) {
         return;
     }
 
-    $content_version = '2';
-    $content_option = 'sitio_cero_participacion_ciudadana_content_version';
-    if ($content_version === (string) get_option($content_option, '')) {
-        return;
-    }
+    remove_post_type_support('participacion_c', 'editor');
+}
+add_action('init', 'sitio_cero_remove_participacion_ciudadana_editor_support', 52);
 
-    $content = sitio_cero_get_participacion_ciudadana_content();
-    if (!is_string($content) || '' === trim($content)) {
-        return;
-    }
+function sitio_cero_get_default_participacion_ciudadana_meta()
+{
+    return array(
+        'hero' => array(
+            'eyebrow' => 'Municipalidad de Concepción',
+            'title'   => 'Participación Ciudadana',
+            'lead'    => 'Información, documentos y mecanismos para fortalecer la organización social, la transparencia y la participación activa en la comuna.',
+            'actions' => array(
+                array(
+                    'label'  => 'Proyecto de Habilitación Normativa: Pedro del Río Zañartu',
+                    'url'    => 'https://concepcion.cl/proyecto-de-habilitacion-normativa-prz/',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Ordenanza de Participación Ciudadana',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/02/Ordenanza-de-Participación-Ciudadana.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Solicitud Ministro de fe',
+                    'url'    => 'https://concepcion.cl/formulario-de-solicitud-de-designacion-de-funcionario-municipal-como-ministro-de-fe/',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Servicios en Línea',
+                    'url'    => '#online',
+                    'target' => '',
+                ),
+                array(
+                    'label'  => 'ODS y Sociedad Civil',
+                    'url'    => 'https://concepcion.cl/ods/',
+                    'target' => '_blank',
+                ),
+            ),
+        ),
+        'subnav' => array(
+            array(
+                'label' => 'Audiencias Públicas',
+                'url'   => '#audiencias',
+            ),
+            array(
+                'label' => 'Kit Elecciones',
+                'url'   => '#kit',
+            ),
+            array(
+                'label' => 'Servicios en línea',
+                'url'   => '#online',
+            ),
+            array(
+                'label' => 'Recursos y documentos',
+                'url'   => '#recursos',
+            ),
+            array(
+                'label' => 'Mecanismos de participación',
+                'url'   => '#mecanismos',
+            ),
+            array(
+                'label' => 'CCOSOC',
+                'url'   => '#ccosoc',
+            ),
+        ),
+        'audiencias' => array(
+            'kicker' => 'Participación',
+            'title'  => 'Audiencias Públicas',
+            'body'   => '<p><strong>¿Qué son las Audiencias Públicas?</strong></p>
+<p>Las audiencias públicas representarán un medio por el cual el alcalde y el concejo municipal conocerán desde la perspectiva de los propios ciudadanos de las materias que estimen de interés comunal.</p>
+<p>Las audiencias públicas podrán ser convocadas por el alcalde o a requerimiento de a lo menos, un tercio del mismo concejo municipal. También podrán ser solicitadas por no menos de cien ciudadanos inscritos en los registros electorales de la comuna.</p>
+<p><strong>Nota:</strong> Conoce sobre el procedimiento de solicitud de Audiencia Pública en la Ordenanza de Participación Ciudadana de la comuna de Concepción.</p>',
+            'links'  => array(
+                array(
+                    'label'  => 'ACTA AUDIENCIA PÚBLICA Nº 1',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/01/ACTA-AUDIENCIA-PÚBLICA-Nº-1-.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'ACTA AUDIENCIA PUBLICA Nº 2',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/01/ACTA-AUDIENCIA-PUBLICA-Nº-2-2022.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'ACTA AUDIENCIA PUBLICA Nº 3',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/01/ACTA-AUDIENCIA-PUBLICA-Nº-3-2022.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'ACTA AUDIENCIA PÚBLICA Nº 4',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/01/ACTA-AUDIENCIA-PÚBLICA-Nº-4-2022.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Ordenanza de Participación Ciudadana',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/01/Ordenanza-de-Participación-Ciudadana.pdf',
+                    'target' => '_blank',
+                ),
+            ),
+        ),
+        'kit' => array(
+            'kicker' => 'Descargas',
+            'title'  => 'Kit Elecciones',
+            'items'  => array(
+                array(
+                    'label'  => 'Comunicación de directorio',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2024/05/Comunicación-de-Directorio-Ley-21.146.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Guía proceso eleccionario',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2025/04/02-Actualización-de-Directorio-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Funciones comisión electoral',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2022/05/Comisioìn-Electoral-.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Comunicación fecha de la elección',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2023/09/comunicación-fecha-de-elección.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Ley 19.418, sobre juntas de vecinos y demás organizaciones comunitarias',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2021/09/Ley-19.418-ultima-versión.pdf',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Ley 21.146, simplifica el procedimiento de calificación de las elecciones',
+                    'url'    => 'https://concepcion.cl/wp-content/uploads/2021/09/Ley-21146_27-FEB-2019-2.pdf',
+                    'target' => '_blank',
+                ),
+            ),
+        ),
+        'online' => array(
+            'kicker' => 'Atención digital',
+            'title'  => 'Servicios en línea',
+            'items'  => array(
+                array(
+                    'label'  => 'Registro Público de Organizaciones Sociales (Elecciones, reclamos, fallos TER), Ley 21.146',
+                    'url'    => 'https://appl2.smc.cl/orgcomunwebdoc/home/index/concepcion',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Ingreso Digital Oficina Partes',
+                    'url'    => 'https://concepcion.cl/formulario-oficina-de-partes/',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Busca tu inscripción en el Registro Civil',
+                    'url'    => 'https://www.portaltransparencia.cl/PortalPdT/pdtta/-/ta/AK002/OA/PJSFL',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Sistema de atención al vecino',
+                    'url'    => 'http://vecino.concepcion.cl',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Consulta Ingresos Oficina Partes',
+                    'url'    => 'http://sgd.smc.cl/mesa/concepcion.aspx',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Formulario Solicitud de copia de estatutos',
+                    'url'    => 'https://concepcion.cl/formulario-solicitud-de-estatutos/',
+                    'target' => '_blank',
+                ),
+                array(
+                    'label'  => 'Solicitud de designación ministro de fe',
+                    'url'    => 'https://concepcion.cl/formulario-de-solicitud-de-designacion-de-funcionario-municipal-como-ministro-de-fe/',
+                    'target' => '_blank',
+                ),
+            ),
+        ),
+        'recursos' => array(
+            'kicker' => 'Biblioteca',
+            'title'  => 'Recursos y documentos',
+            'items'  => array(
+                array(
+                    'title'   => 'Kit Digital Dirigente Social',
+                    'anchor'  => '',
+                    'content' => '<a class="pc-link" href="https://concepcion.cl/wp-content/uploads/2019/09/Kit-Digital.zip" target="_blank" rel="noopener">Descarga aquí tu Kit Digital</a>',
+                ),
+                array(
+                    'title'   => 'Audiencia Pública',
+                    'anchor'  => '',
+                    'content' => '<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2023/01/Decreto-0008.pdf" target="_blank" rel="noopener">Audiencia n°6</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2023/01/audiencia-5.pdf" target="_blank" rel="noopener">Audiencia n°5</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/09/audiencia-n°4.pdf" target="_blank" rel="noopener">Audiencia n°4</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/09/Dec-949-AUDIENCIA-Nº-1.pdf" target="_blank" rel="noopener">Dec 949 AUDIENCIA Nº 1</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/09/Dec-Nº-632-CONVOCA-AUDIENCIA-PUBLICA-Nº3.pdf" target="_blank" rel="noopener">Dec Nº 632 CONVOCA AUDIENCIA PUBLICA Nº3</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/09/Dec-Nº-845-CONVOCA-A-AUDIENCIA-Nº-4.pdf" target="_blank" rel="noopener">Dec Nº 845 CONVOCA A AUDIENCIA Nº 4</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/09/Dec-Nº442-Audiencia-Pùblica-Nº2.pdf" target="_blank" rel="noopener">Dec Nº442 Audiencia Pública Nº2</a></li>
+</ul>',
+                ),
+                array(
+                    'title'   => 'Guía de trámites personalidad jurídica',
+                    'anchor'  => '',
+                    'content' => '<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/01__Constitución_de_Personas_Jurídicas_Ley_19_418_Juntas_de_Vecinos_y_Demás_Organizaciones_Comunitarias.pdf" target="_blank" rel="noopener">Pasos para constituir juntas de vecinos y organizaciones comunitarias</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/03-Modificación-de-Estatutos-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf" target="_blank" rel="noopener">Modificación Estatuto Ley 19.418 (juntas de vecinos y organizaciones comunitarias)</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/06-De-la-Disolución-de-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf" target="_blank" rel="noopener">Disolución de Organización Ley 19.418 (juntas de vecinos y organizaciones comunitarias)</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/04-Modificación-de-Directorio-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf" target="_blank" rel="noopener">Modificación del Directorio Ley 19.418 (juntas de vecinos y organizaciones comunitarias)</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/05-De-la-Constitución-de-Uniones-Comunales-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf" target="_blank" rel="noopener">Constitución Uniones Comunales Ley 19.418</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/07-De-la-Censura-de-Dirigentes-Sociales-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf" target="_blank" rel="noopener">Censura dirigentes sociales Ley 19.418</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/04/08-Otro-Trámites-Personas-Jurídicas-Ley-19.418-Juntas-de-Vecinos-y-Demás-Organizaciones-Comunitarias.pdf" target="_blank" rel="noopener">Otros trámites Ley 19.418</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/08/Modificación-Estatuto-Corpporación-ONG-Asociación-y-Fundación.pdf" target="_blank" rel="noopener">Modificación Estatuto (Corporación ONG, Asociación y Fundación)</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/08/Constitucion-de-Organizaciones-regidas-bajo-el-Codigo-Civil.pdf" target="_blank" rel="noopener">Constitución Asociación, Corporaciones, Fundaciones y ONG</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/08/Tenencia-responsable-de-mascotas-1.pdf" target="_blank" rel="noopener">Registro organizaciones promotoras de tenencia responsable de mascotas (Ley Nº 21020)</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/08/TRAMITES-LEY-DE-COPROPIEDAD-21.442.pdf" target="_blank" rel="noopener">Trámites de la Ley de Copropiedad N°21.442</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/08/REGLAMENTO-DE-COPROPIEDAD.pdf" target="_blank" rel="noopener">Reglamento de Copropiedad</a></li>
+</ul>
+<h3>Formato macro tipo, instructivos de participación ciudadana</h3>
+<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2024/12/Instructivo-Comunicación-de-Directorio.-ley-21.146.docx" target="_blank" rel="noopener">Instructivo Comunicación de Directorio Ley 21.146</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/COMUNICACIÓN-DE-COMITÉ-DE-ADMINISTRACION-LEY-DE-COPROPIEDAD-INMOBILIARIA3.docx" target="_blank" rel="noopener">Comunicación de comité de administración Ley de Copropiedad Inmobiliaria</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/DOCUMENTOS-PARA-REGISTRO-PJ-PROMOTORAS-DE-TENENCIA-RESPONSABLE-DE-MASCOTAS2.docx" target="_blank" rel="noopener">Documento para registro PJ promotoras de tenencia responsable de mascotas</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/Instructivo-Constitución-de-Corporaciones-y-Fundaciones1.docx" target="_blank" rel="noopener">Instructivo Constitución de Corporaciones y Fundaciones</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2024/12/Instructivo-Modificacion-Directorio-Corporaciones.docx" target="_blank" rel="noopener">Instructivo Modificación Directorio Corporaciones</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2024/12/Instructivo-Modificacion-Estatutos-Ley-Nº-19418.docx" target="_blank" rel="noopener">Instructivo Modificación Estatutos Ley Nº 19.418</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2024/12/Instructivo-Obtención-Personalidad-Jurídica-OO-CC.docx" target="_blank" rel="noopener">Instructivo Obtención Personalidad Jurídica OO CC</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/Instructivo-Otros-Tramites1.docx" target="_blank" rel="noopener">Instructivo Otros Trámites</a></li>
+</ul>',
+                ),
+                array(
+                    'title'   => 'Cartas Ciudadanas',
+                    'anchor'  => '',
+                    'content' => '<a class="pc-link" href="https://concepcion.cl/wp-content/uploads/2019/09/carta-ciudadanal-laguna-redonda.pdf" target="_blank" rel="noopener">Carta Ciudadana Laguna Redonda</a>',
+                ),
+                array(
+                    'title'   => 'Estatutos Tipo',
+                    'anchor'  => '',
+                    'content' => '<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/03/1-ESTATUTOS-JUNTA-DE-VECINOS-.docx" target="_blank" rel="noopener">Estatuto tipo Junta de Vecinos</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/03/Estatutos_Organización_Comunitaria_3_0.docx" target="_blank" rel="noopener">Estatuto tipo Organización Comunitaria</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/03/Estatutos_Organización_Comunitaria_CLUB_DE_ADULTO_MAYOR_3_0.docx" target="_blank" rel="noopener">Estatuto tipo Club de Adulto Mayor</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/03/Estatutos_Organización_Comunitaria_COMITÉ_DE_VIVIENDA_3_0.docx" target="_blank" rel="noopener">Estatuto tipo Comité de Vivienda</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/03/Estatutos_Organización_Comunitaria_COMITÉ_DE_SEGURIDAD_3_0.docx" target="_blank" rel="noopener">Estatuto tipo Comité de Seguridad</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2025/03/6-Modelo_estatutos_asociacion.doc" target="_blank" rel="noopener">Modelo estatutos asociación (Código Civil)</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2022/06/Modelo_estatutos_centro_de_padres.pdf" target="_blank" rel="noopener">Modelo estatutos Centro de Padres</a></li>
+</ul>',
+                ),
+                array(
+                    'title'   => 'Capacitaciones',
+                    'anchor'  => '',
+                    'content' => '<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/infobanner/capacitacion-ley-20-500-sobre-asociaciones-y-participacion-ciudadana-en-la-gestion-publica/" target="_blank" rel="noopener">Capacitación Ley 20.500 sobre asociaciones y participación ciudadana en la gestión pública</a></li>
+<li><a href="https://www.concepcion.cl/infobanner/capacitacion-codes-16-05-2018/" target="_blank" rel="noopener">Capacitación CODES (16-05-2018)</a></li>
+</ul>',
+                ),
+                array(
+                    'title'   => 'CCOSOC',
+                    'anchor'  => 'ccosoc',
+                    'content' => '<p><strong>Fallo Tribunal Electoral Regional Elección Consejeros(as) Consejo Comunal de Organizaciones de la Sociedad Civil Comuna de Concepción.</strong></p>
+<p><a class="pc-link" href="https://concepcion.cl/wp-content/uploads/2023/01/8_175-2022_Sentencia.pdf" target="_blank" rel="noopener">Documento</a></p>
+<h3>Reglamentos</h3>
+<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/REGLAMENTO_01-2014.pdf" target="_blank" rel="noopener">Reglamento Comisiones y Sesiones</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/REGLAMENTO_01-2014.pdf" target="_blank" rel="noopener">Reglamento 01-2014</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/REGLAMENTO_01-2014.pdf" target="_blank" rel="noopener">Reglamento CCOSOC 2018</a></li>
+</ul>
+<h3>Constitución</h3>
+<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/DECRETO-Constitución-CCOSOC-2014-2018.pdf" target="_blank" rel="noopener">DECRETO Constitución CCOSOC 2014-2018</a></li>
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/DECRETO-Constitución-CCOSOC-2018-2022.pdf" target="_blank" rel="noopener">DECRETO Constitución CCOSOC 2018-2022</a></li>
+</ul>
+<h3>Actas</h3>
+<h4>Sesiones 2014-2018</h4>
+<h5>Sesiones Extraordinarias</h5>
+<ul class="pc-list">
+<li><a href="http://ventatuning.webkonce.cl/wp-content/uploads/2019/09/actaextra_01-2016.pdf" target="_blank" rel="noopener">actaextra_01-2016</a></li>
+<li><a href="http://ventatuning.webkonce.cl/wp-content/uploads/2019/09/actaextra_01-2017.pdf" target="_blank" rel="noopener">actaextra_01-2017</a></li>
+<li><a href="http://ventatuning.webkonce.cl/wp-content/uploads/2019/09/actaextra_02-2017.pdf" target="_blank" rel="noopener">actaextra_02-2017</a></li>
+</ul>
+<h5>Sesiones Ordinarias</h5>
+<ul class="pc-list">
+<li><a href="https://concepcion.cl/wp-content/uploads/2019/09/Acta-ord.-constitucion-ccosoc.pdf" target="_blank" rel="noopener">Acta ordinaria constitución CCOSOC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_ccosoc_01-2015.pdf" target="_blank" rel="noopener">Acta CCOSOC 01-2015</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_ccosoc_02-2015.pdf" target="_blank" rel="noopener">Acta CCOSOC 02-2015</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta-ord.-03-2015.pdf" target="_blank" rel="noopener">Acta ordinaria 03-2015</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta-sesi%C3%B3n-ordinaria-n%C2%BA-04-2015.pdf" target="_blank" rel="noopener">Acta sesión ordinaria Nº 04-2015</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta-sesi%C3%B3-n%C2%BA-05-2015.pdf" target="_blank" rel="noopener">Acta sesión Nº 05-2015</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta.ordinaria-n%C2%BA-06-2015.pdf" target="_blank" rel="noopener">Acta ordinaria Nº 06-2015</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_07-2016.pdf" target="_blank" rel="noopener">Acta 07-2016</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_08-2016.pdf" target="_blank" rel="noopener">Acta 08-2016</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_9-2016.pdf" target="_blank" rel="noopener">Acta 9-2016</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta-09-2016.pdf" target="_blank" rel="noopener">Acta 09-2016</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_10-2016.pdf" target="_blank" rel="noopener">Acta 10-2016</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/actaextra_01-20171.pdf" target="_blank" rel="noopener">Acta extra ordinaria 01-2017</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/acta_12-2017.pdf" target="_blank" rel="noopener">Acta 12-2017</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/actaccosoc_13-2017.pdf" target="_blank" rel="noopener">Acta CCOSOC 13-2017</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/actacosoc_14-2017.pdf" target="_blank" rel="noopener">Acta CCOSOC 14-2017</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/actaextracosoc_03-2017.pdf" target="_blank" rel="noopener">Acta extra CCOSOC 03-2017</a></li>
+</ul>
+<h3>Comisiones</h3>
+<h4>CCOSOC 2014-2018</h4>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/COMISIONES-COSOC.pdf" target="_blank" rel="noopener">Comisiones COSOC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/Comisiones-Ccosoc.pdf" target="_blank" rel="noopener">Comisiones CCOSOC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/FORMATO-DE-ACTAS.pdf" target="_blank" rel="noopener">Formato de actas</a></li>
+</ul>
+<h3>Documentos</h3>
+<h4>Decretos de Convocatoria 2014-2018</h4>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/DA_403-2014-SEGUNDA-CONVOCATORIA-A-ELECCIONES-DE-ORGANIZACIONES-INTERES-PUBLICO-Y-ASOCIACIONES...pdf" target="_blank" rel="noopener">Decreto Alcaldicio 403-2014 Segunda Convocatoria a elecciones de organizaciones interés público y asociaciones</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/DA_183-2014-convocatoria-elecciones-consejo-de-la-sociedad-civil.pdf" target="_blank" rel="noopener">DA 183-2014 Convocatoria elecciones CCOSOC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/DA_146-2014.pdf" target="_blank" rel="noopener">Decreto Alcaldicio 146-2014</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/DA_26-2014-convocatoria-elecciones.pdf" target="_blank" rel="noopener">Decreto Alcaldicio 26-2014 convocatoria elecciones</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/Decreto-385-paro-del-Registro-Civil.pdf" target="_blank" rel="noopener">Decreto 385 paro del Registro-Civil</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/Decreto-1era-convocatoria.pdf" target="_blank" rel="noopener">Decreto 1era convocatoria</a></li>
+</ul>
+<h4>Decreto tablas de materias</h4>
+<h5>Sesión Extraordinaria</h5>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/DA_604-2014-CONVOCATORIA-SESI%C3%93N-EXTRAORDINARIA-N%C2%B01.pdf" target="_blank" rel="noopener">DA 604-2014 Convocatoria sesión extraordinaria Nº1</a></li>
+</ul>
+<h5>Sesión Ordinaria</h5>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/181204160626_0001.pdf" target="_blank" rel="noopener">Decreto de convocatoria sesión Nº1 CCOSOC</a></li>
+</ul>
+<h4>Elecciones CCOSOC 2018-2022</h4>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/ORG.-RELEVANTES-PARA-EL-DESARROLLO-ECONOMICO-SOCIAL-Y-CULTURAL-DE-LA-CIUDAD.pdf" target="_blank" rel="noopener">Organizaciones relevantes para el desarrollo económico social y cultural de la ciudad</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/DA_1006-2018.pdf" target="_blank" rel="noopener">Decreto Alcaldicio 1006-2018</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/CRONOGRAMA-ELECCIONES-CCOSOC-2018.pdf" target="_blank" rel="noopener">Cronograma Elecciones CCOSOC 2018</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LISTADO-FUNCIONALES-CCOSOC-20181.pdf" target="_blank" rel="noopener">Listado Fundido CCOSOC 2018</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LISTADO-ORG.-INTERES-PUBLICO-CCOSOC-2018.pdf" target="_blank" rel="noopener">Listado Org Interés Público CCOSOC 2018</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LISTADO-TERRITORIALES-CCOSOC-2018.pdf" target="_blank" rel="noopener">Listado Territoriales CCOSOC 2018</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LISTADO-ASOC.-SINDICALES-CCOSOC-2018.pdf" target="_blank" rel="noopener">Listado Asociaciones Sindicales CCOSOC 2018</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LISTADO-CCOSOC-2018.xlsx" target="_blank" rel="noopener">Listado CCOSOC 2018</a></li>
+</ul>
+<h4>Capacitaciones</h4>
+<h5>CCOSOC 2014-2018</h5>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/Ley-20.500-y-CCOSOSC.pdf" target="_blank" rel="noopener">Ley 20.500 y CCOSOSC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/PROYECTOS-FNDRcosoc.pdf" target="_blank" rel="noopener">Proyectos FNDR CCOSOC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/Reglamento-del-Consejo-Comunal-de-Organizaciones-de-la-Sociedad-Civil.pdf" target="_blank" rel="noopener">Reglamento del CCOSOC</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LEY-N%C2%B0-20.500.pptx" target="_blank" rel="noopener">LEY N° 20.500</a></li>
+</ul>
+<h5>CCOSOC 2018-2022</h5>
+<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/Presentaci%C3%B3n-Reglamento-COSOC.ppt" target="_blank" rel="noopener">Presentación Reglamento COSOC</a></li>
+</ul>',
+                ),
+                array(
+                    'title'   => 'Mecanismos de Participación',
+                    'anchor'  => 'mecanismos',
+                    'content' => '<h3>Consejo de la Sociedad Civil</h3>
+<p>Descripción: Será un órgano asesor y colaborador de la municipalidad, el cual tendrá por objetivo asegurar la participación de las organizaciones comunitarias de carácter territorial y funcional y de las organizaciones de interés público de la comuna.</p>
+<h4>Requisitos</h4>
+<p>a) Tener 18 años de edad, con excepción de los representantes de organizaciones señaladas en la ley Nº 19.418 sobre juntas de vecinos y demás organizaciones comunitarias;</p>
+<p>b) Tener un año de afiliación a una organización del estamento, en caso que corresponda, en el momento de la elección;</p>
+<p>c) Ser chileno o extranjero avecindado en el país, durante 3 años.</p>
+<p>d) No haber sido condenado por delito que merezca pena aflictiva.</p>
+<p>Para más información del CCOSOC AQUÍ</p>
+<h3>Cabildos Comunales</h3>
+<p>Descripción: Instrumento de participación ciudadana, consultiva, convocada por la municipalidad, que tendrá por objeto requerir la opinión de la comunidad en temas de interés local, a los que se podrá invitar a actores relevantes en los temas que se debatirán.</p>
+<p>La participación de la comunidad local en los cabildos comunales es voluntaria y sus conclusiones no serán vinculantes para la Municipalidad de Concepción.</p>
+<p>Requisitos: Los cabildos comunales serán convocados por el alcalde o por requerimiento de un tercio del concejo municipal. El alcalde iniciará el procedimiento del cabildo, en cualquier época, mediante convocatoria que deberá expedir a lo menos 15 días corridos, antes de la fecha de realización del mismo.</p>
+<p>La convocatoria se hará a través de medios escritos de circulación comunal, publicación en la web municipal y/o mediante la disposición de informativos en puntos relevante de la comuna.</p>
+<p>Enlace: <a href="https://concepcion.cl/wp-content/uploads/2023/01/Ordenanza-de-Participación-Ciudadana.pdf" target="_blank" rel="noopener">Ordenanza de Participación Ciudadana</a></p>
+<h3>Audiencias Públicas</h3>
+<p>Descripción: Mecanismo por el cual el alcalde y el concejo municipal conocerán desde la perspectiva de los propios ciudadanos de las materias que estimen de interés comunal.</p>
+<p>Las audiencias públicas podrán ser convocadas por el alcalde o a requerimiento de a lo menos, un tercio del mismo concejo municipal.</p>
+<p>También podrán ser solicitadas por no menos de cien ciudadanos inscritos en los registros electorales de la comuna.</p>
+<p>Requisitos: Para solicitar una audiencia pública se requerirá:</p>
+<p>a) Presentar una solicitud escrita identificando, a lo más, a cinco personas que representarán a los requirentes, indicando nombre completo, número de cédula de nacional de identidad, domicilio y firma;</p>
+<p>b) Señalar y fundamentar la materia que se someterá a conocimiento del concejo municipal, y</p>
+<p>c) Nómina de, a lo menos, cien ciudadanos inscritos en los registros electorales de la comuna, indicando nombre completo, número de cédula de nacional de identidad, domicilio y firma.</p>
+<p>Enlace: <a href="https://concepcion.cl/wp-content/uploads/2023/01/Ordenanza-de-Participación-Ciudadana.pdf" target="_blank" rel="noopener">Ordenanza de Participación Ciudadana</a></p>
+<h3>Encuestas de opinión, consultas o sondeos</h3>
+<p>Descripción: Mecanismo que tiene por objeto explorar y conocer las percepciones, sentimientos y pensamientos de la comunidad local respecto de la gestión municipal y de materias de interés comunal.</p>
+<p>No se podrá efectuar ninguna encuesta de opinión, consulta o sondeo dentro de los seis meses anteriores a cualquier elección, ya sea presidencial, parlamentaria o municipal.</p>
+<p>Requisitos: La consulta vecinal será convocada, en cualquier época, por la municipalidad. En dicha convocatoria se expresará el objeto de la consulta, así como la fecha y el lugar de su realización por lo menos siete días antes de la fecha establecida.</p>
+<p>La convocatoria impresa se colocará en lugares de mayor afluencia y se difundirá en los medios masivos de comunicación local. Las encuestas, consultas o sondeos serán dispuestas mediante un decreto alcaldicio.</p>
+<p>Enlace: <a href="https://concepcion.cl/wp-content/uploads/2023/01/Ordenanza-de-Participación-Ciudadana.pdf" target="_blank" rel="noopener">Ordenanza de Participación Ciudadana</a></p>
+<h3>Plebiscitos Comunales</h3>
+<p>Descripción: Acto mediante el cual se manifiesta la voluntad soberana de la ciudadanía local, mediante su opinión en relación a materias determinadas de interés comunal, que le son consultadas.</p>
+<p>Requisitos: Ciudadanos inscritos en los registros electorales de la comuna.</p>
+<p>Enlace: <a href="https://concepcion.cl/wp-content/uploads/2023/01/Ordenanza-de-Participación-Ciudadana.pdf" target="_blank" rel="noopener">Ordenanza de Participación Ciudadana</a></p>
+<h3>Fondo de Desarrollo Vecinal</h3>
+<p>Descripción: Fondo municipal que debe destinarse a brindar apoyo financiero a proyectos específicos de desarrollo comunitario, presentados por las juntas de vecinos y organizaciones funcionales.</p>
+<p>Requisitos: Indirecta a través de juntas de vecinos.</p>
+<h3>Constitución de Organizaciones Comunitarias como Mecanismos de Participación</h3>
+<p>Descripción: Las Organizaciones Comunitarias son entidades de participación de los habitantes de la comuna, a través de ellas, los vecinos pueden hacer llegar a las autoridades distintos proyectos, priorizaciones de intereses comunales, influir en las decisiones de las autoridades, gestionar y/o ejecutar obras y/o proyectos de incidencia en la unidad vecinal o en la comuna entre otras.</p>
+<p>Requisitos: La Comunidad local podrá formar, en cualquier época, organizaciones de intereses público, entendiéndose por el solo ministerio de la ley, como este tipo de organizaciones, las de carácter funcional, territorial, e indígenas, asegurándose en general la participación de todo tipo de asociación que tenga por finalidad la agrupación de personas en torno a objetos de intereses común a los asociados, o de afectación de bienes a un fin determinado.</p>
+<p>Enlace:</p>
+<p><a href="https://concepcion.cl/wp-content/uploads/2021/09/Ley-19.418-ultima-versión.pdf" target="_blank" rel="noopener">Ley 19.418 de Juntas de Vecinos y demás organizaciones Comunitarias</a></p>
+<p><a href="https://www.concepcion.cl/wp-content/uploads/2019/02/LEY-N%C2%B0-20.500.pptx" target="_blank" rel="noopener">Ley 20.500 sobre asociaciones y participación ciudadana en la gestión pública</a></p>',
+                ),
+                array(
+                    'title'   => 'Reglamento FONDEVE',
+                    'anchor'  => '',
+                    'content' => '<ul class="pc-list">
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/04/Reglamento-6-del-7-sept.-2001.-FONDEVE.pdf" target="_blank" rel="noopener">Reglamento Nº 6 – 7 sept. 2001</a></li>
+<li><a href="https://www.concepcion.cl/wp-content/uploads/2019/04/Reglamento-6Modificacion-FONDEVE-16-Oct-2009.pdf" target="_blank" rel="noopener">Reglamento Nº 4 Modificación – 16 Oct 2009</a></li>
+</ul>',
+                ),
+                array(
+                    'title'   => 'Credencial del Dirigente Social',
+                    'anchor'  => '',
+                    'content' => '<a class="pc-link" href="https://www.concepcion.cl/wp-content/uploads/2019/05/convenio-dirigente-nov.2018.pdf" target="_blank" rel="noopener">Convenio</a>',
+                ),
+            ),
+        ),
+    );
+}
 
-    $posts = get_posts(
-        array(
-            'post_type'      => 'participacion_c',
-            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-            'name'           => 'participacion-ciudadana',
-            'posts_per_page' => 1,
-            'no_found_rows'  => true,
-        )
+function sitio_cero_participacion_ciudadana_has_meta($post_id)
+{
+    $keys = array(
+        'sitio_cero_pc_hero_title',
+        'sitio_cero_pc_hero_actions',
+        'sitio_cero_pc_subnav_items',
+        'sitio_cero_pc_audiencias_title',
+        'sitio_cero_pc_audiencias_links',
+        'sitio_cero_pc_kit_title',
+        'sitio_cero_pc_kit_items',
+        'sitio_cero_pc_online_title',
+        'sitio_cero_pc_online_items',
+        'sitio_cero_pc_recursos_title',
+        'sitio_cero_pc_recursos_items',
     );
 
-    foreach ($posts as $post) {
-        if (!$post instanceof WP_Post) {
+    foreach ($keys as $key) {
+        if (metadata_exists('post', $post_id, $key)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function sitio_cero_set_participacion_ciudadana_defaults($post_id)
+{
+    $defaults = sitio_cero_get_default_participacion_ciudadana_meta();
+
+    update_post_meta($post_id, 'sitio_cero_pc_hero_eyebrow', $defaults['hero']['eyebrow']);
+    update_post_meta($post_id, 'sitio_cero_pc_hero_title', $defaults['hero']['title']);
+    update_post_meta($post_id, 'sitio_cero_pc_hero_lead', $defaults['hero']['lead']);
+    update_post_meta($post_id, 'sitio_cero_pc_hero_actions', $defaults['hero']['actions']);
+
+    update_post_meta($post_id, 'sitio_cero_pc_subnav_items', $defaults['subnav']);
+
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_kicker', $defaults['audiencias']['kicker']);
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_title', $defaults['audiencias']['title']);
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_body', $defaults['audiencias']['body']);
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_links', $defaults['audiencias']['links']);
+
+    update_post_meta($post_id, 'sitio_cero_pc_kit_kicker', $defaults['kit']['kicker']);
+    update_post_meta($post_id, 'sitio_cero_pc_kit_title', $defaults['kit']['title']);
+    update_post_meta($post_id, 'sitio_cero_pc_kit_items', $defaults['kit']['items']);
+
+    update_post_meta($post_id, 'sitio_cero_pc_online_kicker', $defaults['online']['kicker']);
+    update_post_meta($post_id, 'sitio_cero_pc_online_title', $defaults['online']['title']);
+    update_post_meta($post_id, 'sitio_cero_pc_online_items', $defaults['online']['items']);
+
+    update_post_meta($post_id, 'sitio_cero_pc_recursos_kicker', $defaults['recursos']['kicker']);
+    update_post_meta($post_id, 'sitio_cero_pc_recursos_title', $defaults['recursos']['title']);
+    update_post_meta($post_id, 'sitio_cero_pc_recursos_items', $defaults['recursos']['items']);
+}
+
+function sitio_cero_get_participacion_ciudadana_meta($post_id)
+{
+    $defaults = sitio_cero_get_default_participacion_ciudadana_meta();
+
+    $hero_eyebrow = get_post_meta($post_id, 'sitio_cero_pc_hero_eyebrow', true);
+    $hero_title = get_post_meta($post_id, 'sitio_cero_pc_hero_title', true);
+    $hero_lead = get_post_meta($post_id, 'sitio_cero_pc_hero_lead', true);
+    $hero_actions = get_post_meta($post_id, 'sitio_cero_pc_hero_actions', true);
+    $subnav_items = get_post_meta($post_id, 'sitio_cero_pc_subnav_items', true);
+    $audiencias_kicker = get_post_meta($post_id, 'sitio_cero_pc_audiencias_kicker', true);
+    $audiencias_title = get_post_meta($post_id, 'sitio_cero_pc_audiencias_title', true);
+    $audiencias_body = get_post_meta($post_id, 'sitio_cero_pc_audiencias_body', true);
+    $audiencias_links = get_post_meta($post_id, 'sitio_cero_pc_audiencias_links', true);
+    $kit_kicker = get_post_meta($post_id, 'sitio_cero_pc_kit_kicker', true);
+    $kit_title = get_post_meta($post_id, 'sitio_cero_pc_kit_title', true);
+    $kit_items = get_post_meta($post_id, 'sitio_cero_pc_kit_items', true);
+    $online_kicker = get_post_meta($post_id, 'sitio_cero_pc_online_kicker', true);
+    $online_title = get_post_meta($post_id, 'sitio_cero_pc_online_title', true);
+    $online_items = get_post_meta($post_id, 'sitio_cero_pc_online_items', true);
+    $recursos_kicker = get_post_meta($post_id, 'sitio_cero_pc_recursos_kicker', true);
+    $recursos_title = get_post_meta($post_id, 'sitio_cero_pc_recursos_title', true);
+    $recursos_items = get_post_meta($post_id, 'sitio_cero_pc_recursos_items', true);
+
+    $hero_actions = is_array($hero_actions) ? $hero_actions : $defaults['hero']['actions'];
+    $subnav_items = is_array($subnav_items) ? $subnav_items : $defaults['subnav'];
+    $audiencias_links = is_array($audiencias_links) ? $audiencias_links : $defaults['audiencias']['links'];
+    $kit_items = is_array($kit_items) ? $kit_items : $defaults['kit']['items'];
+    $online_items = is_array($online_items) ? $online_items : $defaults['online']['items'];
+    $recursos_items = is_array($recursos_items) ? $recursos_items : $defaults['recursos']['items'];
+
+    return array(
+        'hero' => array(
+            'eyebrow' => is_string($hero_eyebrow) && '' !== trim($hero_eyebrow) ? $hero_eyebrow : $defaults['hero']['eyebrow'],
+            'title'   => is_string($hero_title) && '' !== trim($hero_title) ? $hero_title : $defaults['hero']['title'],
+            'lead'    => is_string($hero_lead) && '' !== trim($hero_lead) ? $hero_lead : $defaults['hero']['lead'],
+            'actions' => $hero_actions,
+        ),
+        'subnav' => $subnav_items,
+        'audiencias' => array(
+            'kicker' => is_string($audiencias_kicker) && '' !== trim($audiencias_kicker) ? $audiencias_kicker : $defaults['audiencias']['kicker'],
+            'title'  => is_string($audiencias_title) && '' !== trim($audiencias_title) ? $audiencias_title : $defaults['audiencias']['title'],
+            'body'   => is_string($audiencias_body) && '' !== trim($audiencias_body) ? $audiencias_body : $defaults['audiencias']['body'],
+            'links'  => $audiencias_links,
+        ),
+        'kit' => array(
+            'kicker' => is_string($kit_kicker) && '' !== trim($kit_kicker) ? $kit_kicker : $defaults['kit']['kicker'],
+            'title'  => is_string($kit_title) && '' !== trim($kit_title) ? $kit_title : $defaults['kit']['title'],
+            'items'  => $kit_items,
+        ),
+        'online' => array(
+            'kicker' => is_string($online_kicker) && '' !== trim($online_kicker) ? $online_kicker : $defaults['online']['kicker'],
+            'title'  => is_string($online_title) && '' !== trim($online_title) ? $online_title : $defaults['online']['title'],
+            'items'  => $online_items,
+        ),
+        'recursos' => array(
+            'kicker' => is_string($recursos_kicker) && '' !== trim($recursos_kicker) ? $recursos_kicker : $defaults['recursos']['kicker'],
+            'title'  => is_string($recursos_title) && '' !== trim($recursos_title) ? $recursos_title : $defaults['recursos']['title'],
+            'items'  => $recursos_items,
+        ),
+    );
+}
+
+function sitio_cero_render_participacion_ciudadana($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return;
+    }
+
+    $data = sitio_cero_get_participacion_ciudadana_meta($post_id);
+
+    ?>
+    <div class="pc-page">
+        <section class="pc-hero">
+            <div class="pc-hero__inner">
+                <p class="pc-hero__eyebrow"><?php echo esc_html($data['hero']['eyebrow']); ?></p>
+                <h1 class="pc-hero__title"><?php echo esc_html($data['hero']['title']); ?></h1>
+                <p class="pc-hero__lead"><?php echo esc_html($data['hero']['lead']); ?></p>
+                <?php if (!empty($data['hero']['actions'])) : ?>
+                    <div class="pc-hero__actions" aria-label="<?php esc_attr_e('Accesos directos', 'sitio-cero'); ?>">
+                        <?php foreach ($data['hero']['actions'] as $action) : ?>
+                            <?php
+                            $label = isset($action['label']) ? sanitize_text_field((string) $action['label']) : '';
+                            $url = isset($action['url']) ? esc_url((string) $action['url']) : '';
+                            $target = isset($action['target']) && '_blank' === $action['target'] ? '_blank' : '';
+                            if ('' === $label || '' === $url) {
+                                continue;
+                            }
+                            ?>
+                            <a class="pc-pill" href="<?php echo esc_url($url); ?>"<?php echo '' !== $target ? ' target="_blank" rel="noopener"' : ''; ?>><?php echo esc_html($label); ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+
+        <?php if (!empty($data['subnav'])) : ?>
+            <section class="pc-subnav" aria-label="<?php esc_attr_e('Indice de contenidos', 'sitio-cero'); ?>">
+                <div class="pc-subnav__inner">
+                    <?php foreach ($data['subnav'] as $item) : ?>
+                        <?php
+                        $label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+                        $url = isset($item['url']) ? esc_url((string) $item['url']) : '';
+                        if ('' === $label || '' === $url) {
+                            continue;
+                        }
+                        ?>
+                        <a class="pc-subnav__link" href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php endif; ?>
+
+        <section id="audiencias" class="pc-section pc-section--soft">
+            <div class="pc-section__inner">
+                <header class="pc-section__header">
+                    <p class="pc-kicker"><?php echo esc_html($data['audiencias']['kicker']); ?></p>
+                    <h2><?php echo esc_html($data['audiencias']['title']); ?></h2>
+                </header>
+                <div class="pc-columns">
+                    <div class="pc-flow">
+                        <?php echo wpautop(wp_kses((string) $data['audiencias']['body'], sitio_cero_get_direccion_allowed_html())); ?>
+                    </div>
+                    <?php if (!empty($data['audiencias']['links'])) : ?>
+                        <div class="pc-linklist" aria-label="<?php esc_attr_e('Documentos de audiencias públicas', 'sitio-cero'); ?>">
+                            <?php foreach ($data['audiencias']['links'] as $link) : ?>
+                                <?php
+                                $label = isset($link['label']) ? sanitize_text_field((string) $link['label']) : '';
+                                $url = isset($link['url']) ? esc_url((string) $link['url']) : '';
+                                $target = isset($link['target']) && '_blank' === $link['target'] ? '_blank' : '';
+                                if ('' === $label || '' === $url) {
+                                    continue;
+                                }
+                                ?>
+                                <a class="pc-link" href="<?php echo esc_url($url); ?>"<?php echo '' !== $target ? ' target="_blank" rel="noopener"' : ''; ?>><?php echo esc_html($label); ?></a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </section>
+
+        <section id="kit" class="pc-section pc-section--paper">
+            <div class="pc-section__inner">
+                <header class="pc-section__header">
+                    <p class="pc-kicker"><?php echo esc_html($data['kit']['kicker']); ?></p>
+                    <h2><?php echo esc_html($data['kit']['title']); ?></h2>
+                </header>
+                <?php if (!empty($data['kit']['items'])) : ?>
+                    <div class="pc-grid" aria-label="<?php esc_attr_e('Kit elecciones', 'sitio-cero'); ?>">
+                        <?php foreach ($data['kit']['items'] as $item) : ?>
+                            <?php
+                            $label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+                            $url = isset($item['url']) ? esc_url((string) $item['url']) : '';
+                            $target = isset($item['target']) && '_blank' === $item['target'] ? '_blank' : '';
+                            if ('' === $label || '' === $url) {
+                                continue;
+                            }
+                            ?>
+                            <a class="pc-card" href="<?php echo esc_url($url); ?>"<?php echo '' !== $target ? ' target="_blank" rel="noopener"' : ''; ?>><?php echo esc_html($label); ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+
+        <section id="online" class="pc-section pc-section--dark">
+            <div class="pc-section__inner">
+                <header class="pc-section__header">
+                    <p class="pc-kicker"><?php echo esc_html($data['online']['kicker']); ?></p>
+                    <h2><?php echo esc_html($data['online']['title']); ?></h2>
+                </header>
+                <?php if (!empty($data['online']['items'])) : ?>
+                    <div class="pc-grid" aria-label="<?php esc_attr_e('Servicios en línea', 'sitio-cero'); ?>">
+                        <?php foreach ($data['online']['items'] as $item) : ?>
+                            <?php
+                            $label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+                            $url = isset($item['url']) ? esc_url((string) $item['url']) : '';
+                            $target = isset($item['target']) && '_blank' === $item['target'] ? '_blank' : '';
+                            if ('' === $label || '' === $url) {
+                                continue;
+                            }
+                            ?>
+                            <a class="pc-card pc-card--dark" href="<?php echo esc_url($url); ?>"<?php echo '' !== $target ? ' target="_blank" rel="noopener"' : ''; ?>><?php echo esc_html($label); ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+
+        <section id="recursos" class="pc-section">
+            <div class="pc-section__inner">
+                <header class="pc-section__header">
+                    <p class="pc-kicker"><?php echo esc_html($data['recursos']['kicker']); ?></p>
+                    <h2><?php echo esc_html($data['recursos']['title']); ?></h2>
+                </header>
+                <?php if (!empty($data['recursos']['items'])) : ?>
+                    <div class="pc-accordion" aria-label="<?php esc_attr_e('Recursos y documentos', 'sitio-cero'); ?>">
+                        <?php foreach ($data['recursos']['items'] as $item) : ?>
+                            <?php
+                            $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+                            $anchor = isset($item['anchor']) ? sanitize_title((string) $item['anchor']) : '';
+                            $content = isset($item['content']) ? (string) $item['content'] : '';
+                            if ('' === $title && '' === trim($content)) {
+                                continue;
+                            }
+                            ?>
+                            <details<?php echo '' !== $anchor ? ' id="' . esc_attr($anchor) . '"' : ''; ?>>
+                                <summary><?php echo esc_html($title); ?></summary>
+                                <div class="pc-accordion__body pc-flow">
+                                    <?php echo do_shortcode(wp_kses((string) $content, sitio_cero_get_direccion_allowed_html())); ?>
+                                </div>
+                            </details>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+    </div>
+    <?php
+}
+
+function sitio_cero_add_participacion_ciudadana_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_participacion_ciudadana',
+        __('Contenido Participación Ciudadana', 'sitio-cero'),
+        'sitio_cero_render_participacion_ciudadana_metabox',
+        'participacion_c',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_participacion_ciudadana_metaboxes');
+
+function sitio_cero_render_participacion_ciudadana_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_participacion_ciudadana_meta', 'sitio_cero_participacion_ciudadana_meta_nonce');
+
+    $data = sitio_cero_get_participacion_ciudadana_meta($post->ID);
+    $hero_actions = !empty($data['hero']['actions']) ? $data['hero']['actions'] : array(array('label' => '', 'url' => '', 'target' => ''));
+    $subnav_items = !empty($data['subnav']) ? $data['subnav'] : array(array('label' => '', 'url' => ''));
+    $audiencias_links = !empty($data['audiencias']['links']) ? $data['audiencias']['links'] : array(array('label' => '', 'url' => '', 'target' => ''));
+    $kit_items = !empty($data['kit']['items']) ? $data['kit']['items'] : array(array('label' => '', 'url' => '', 'target' => ''));
+    $online_items = !empty($data['online']['items']) ? $data['online']['items'] : array(array('label' => '', 'url' => '', 'target' => ''));
+    $recursos_items = !empty($data['recursos']['items']) ? $data['recursos']['items'] : array(array('title' => '', 'anchor' => '', 'content' => ''));
+
+    ?>
+    <div class="sitio-cero-pc-metabox">
+        <h3><?php esc_html_e('Hero', 'sitio-cero'); ?></h3>
+        <div class="sitio-cero-pc-grid">
+            <p>
+                <label for="sitio_cero_pc_hero_eyebrow"><strong><?php esc_html_e('Eyebrow', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_hero_eyebrow" name="sitio_cero_pc_hero_eyebrow" type="text" class="widefat" value="<?php echo esc_attr($data['hero']['eyebrow']); ?>">
+            </p>
+            <p>
+                <label for="sitio_cero_pc_hero_title"><strong><?php esc_html_e('Título', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_hero_title" name="sitio_cero_pc_hero_title" type="text" class="widefat" value="<?php echo esc_attr($data['hero']['title']); ?>">
+            </p>
+            <p>
+                <label for="sitio_cero_pc_hero_lead"><strong><?php esc_html_e('Bajada', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_hero_lead" name="sitio_cero_pc_hero_lead" type="text" class="widefat" value="<?php echo esc_attr($data['hero']['lead']); ?>">
+            </p>
+        </div>
+
+        <h4><?php esc_html_e('Accesos directos (píldoras)', 'sitio-cero'); ?></h4>
+        <div class="sitio-cero-pc-repeater" data-pc-repeater>
+            <div class="sitio-cero-pc-list" data-pc-list>
+                <?php foreach ($hero_actions as $action) : ?>
+                    <div class="sitio-cero-pc-row" data-pc-row>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_hero_action_label[]" value="<?php echo esc_attr((string) ($action['label'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                            <input type="url" class="widefat" name="sitio_cero_pc_hero_action_url[]" value="<?php echo esc_url((string) ($action['url'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_pc_hero_action_target[]">
+                                <option value=""<?php selected('', $action['target'] ?? ''); ?>><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                <option value="_blank"<?php selected('_blank', $action['target'] ?? ''); ?>><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                            </select>
+                        </div>
+                        <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="button button-secondary" data-pc-add><?php esc_html_e('Agregar acceso', 'sitio-cero'); ?></button>
+            <template data-pc-template>
+                <div class="sitio-cero-pc-row" data-pc-row>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_hero_action_label[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                        <input type="url" class="widefat" name="sitio_cero_pc_hero_action_url[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                        <select class="widefat" name="sitio_cero_pc_hero_action_target[]">
+                            <option value=""><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                            <option value="_blank"><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                        </select>
+                    </div>
+                    <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+
+        <hr>
+        <h3><?php esc_html_e('Subnav', 'sitio-cero'); ?></h3>
+        <div class="sitio-cero-pc-repeater" data-pc-repeater>
+            <div class="sitio-cero-pc-list" data-pc-list>
+                <?php foreach ($subnav_items as $item) : ?>
+                    <div class="sitio-cero-pc-row" data-pc-row>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_subnav_label[]" value="<?php echo esc_attr((string) ($item['label'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Enlace', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_subnav_url[]" value="<?php echo esc_attr((string) ($item['url'] ?? '')); ?>" placeholder="#audiencias">
+                        </div>
+                        <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="button button-secondary" data-pc-add><?php esc_html_e('Agregar enlace', 'sitio-cero'); ?></button>
+            <template data-pc-template>
+                <div class="sitio-cero-pc-row" data-pc-row>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_subnav_label[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Enlace', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_subnav_url[]" value="" placeholder="#audiencias">
+                    </div>
+                    <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+
+        <hr>
+        <h3><?php esc_html_e('Audiencias Públicas', 'sitio-cero'); ?></h3>
+        <div class="sitio-cero-pc-grid">
+            <p>
+                <label for="sitio_cero_pc_audiencias_kicker"><strong><?php esc_html_e('Kicker', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_audiencias_kicker" name="sitio_cero_pc_audiencias_kicker" type="text" class="widefat" value="<?php echo esc_attr($data['audiencias']['kicker']); ?>">
+            </p>
+            <p>
+                <label for="sitio_cero_pc_audiencias_title"><strong><?php esc_html_e('Título', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_audiencias_title" name="sitio_cero_pc_audiencias_title" type="text" class="widefat" value="<?php echo esc_attr($data['audiencias']['title']); ?>">
+            </p>
+        </div>
+        <p>
+            <label for="sitio_cero_pc_audiencias_body"><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+            <textarea id="sitio_cero_pc_audiencias_body" name="sitio_cero_pc_audiencias_body" class="widefat" rows="6"><?php echo esc_textarea($data['audiencias']['body']); ?></textarea>
+            <small><?php esc_html_e('Puedes usar HTML básico (p, strong, ul, li, a).', 'sitio-cero'); ?></small>
+        </p>
+
+        <h4><?php esc_html_e('Documentos de Audiencias', 'sitio-cero'); ?></h4>
+        <div class="sitio-cero-pc-repeater" data-pc-repeater>
+            <div class="sitio-cero-pc-list" data-pc-list>
+                <?php foreach ($audiencias_links as $link) : ?>
+                    <div class="sitio-cero-pc-row" data-pc-row>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_audiencias_link_label[]" value="<?php echo esc_attr((string) ($link['label'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                            <input type="url" class="widefat" name="sitio_cero_pc_audiencias_link_url[]" value="<?php echo esc_url((string) ($link['url'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_pc_audiencias_link_target[]">
+                                <option value=""<?php selected('', $link['target'] ?? ''); ?>><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                <option value="_blank"<?php selected('_blank', $link['target'] ?? ''); ?>><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                            </select>
+                        </div>
+                        <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="button button-secondary" data-pc-add><?php esc_html_e('Agregar documento', 'sitio-cero'); ?></button>
+            <template data-pc-template>
+                <div class="sitio-cero-pc-row" data-pc-row>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_audiencias_link_label[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                        <input type="url" class="widefat" name="sitio_cero_pc_audiencias_link_url[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                        <select class="widefat" name="sitio_cero_pc_audiencias_link_target[]">
+                            <option value=""><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                            <option value="_blank"><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                        </select>
+                    </div>
+                    <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+
+        <hr>
+        <h3><?php esc_html_e('Kit Elecciones', 'sitio-cero'); ?></h3>
+        <div class="sitio-cero-pc-grid">
+            <p>
+                <label for="sitio_cero_pc_kit_kicker"><strong><?php esc_html_e('Kicker', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_kit_kicker" name="sitio_cero_pc_kit_kicker" type="text" class="widefat" value="<?php echo esc_attr($data['kit']['kicker']); ?>">
+            </p>
+            <p>
+                <label for="sitio_cero_pc_kit_title"><strong><?php esc_html_e('Título', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_kit_title" name="sitio_cero_pc_kit_title" type="text" class="widefat" value="<?php echo esc_attr($data['kit']['title']); ?>">
+            </p>
+        </div>
+        <div class="sitio-cero-pc-repeater" data-pc-repeater>
+            <div class="sitio-cero-pc-list" data-pc-list>
+                <?php foreach ($kit_items as $item) : ?>
+                    <div class="sitio-cero-pc-row" data-pc-row>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_kit_item_label[]" value="<?php echo esc_attr((string) ($item['label'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                            <input type="url" class="widefat" name="sitio_cero_pc_kit_item_url[]" value="<?php echo esc_url((string) ($item['url'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_pc_kit_item_target[]">
+                                <option value=""<?php selected('', $item['target'] ?? ''); ?>><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                <option value="_blank"<?php selected('_blank', $item['target'] ?? ''); ?>><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                            </select>
+                        </div>
+                        <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="button button-secondary" data-pc-add><?php esc_html_e('Agregar archivo', 'sitio-cero'); ?></button>
+            <template data-pc-template>
+                <div class="sitio-cero-pc-row" data-pc-row>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_kit_item_label[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                        <input type="url" class="widefat" name="sitio_cero_pc_kit_item_url[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                        <select class="widefat" name="sitio_cero_pc_kit_item_target[]">
+                            <option value=""><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                            <option value="_blank"><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                        </select>
+                    </div>
+                    <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+
+        <hr>
+        <h3><?php esc_html_e('Servicios en línea', 'sitio-cero'); ?></h3>
+        <div class="sitio-cero-pc-grid">
+            <p>
+                <label for="sitio_cero_pc_online_kicker"><strong><?php esc_html_e('Kicker', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_online_kicker" name="sitio_cero_pc_online_kicker" type="text" class="widefat" value="<?php echo esc_attr($data['online']['kicker']); ?>">
+            </p>
+            <p>
+                <label for="sitio_cero_pc_online_title"><strong><?php esc_html_e('Título', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_online_title" name="sitio_cero_pc_online_title" type="text" class="widefat" value="<?php echo esc_attr($data['online']['title']); ?>">
+            </p>
+        </div>
+        <div class="sitio-cero-pc-repeater" data-pc-repeater>
+            <div class="sitio-cero-pc-list" data-pc-list>
+                <?php foreach ($online_items as $item) : ?>
+                    <div class="sitio-cero-pc-row" data-pc-row>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_online_item_label[]" value="<?php echo esc_attr((string) ($item['label'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                            <input type="url" class="widefat" name="sitio_cero_pc_online_item_url[]" value="<?php echo esc_url((string) ($item['url'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_pc_online_item_target[]">
+                                <option value=""<?php selected('', $item['target'] ?? ''); ?>><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                <option value="_blank"<?php selected('_blank', $item['target'] ?? ''); ?>><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                            </select>
+                        </div>
+                        <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="button button-secondary" data-pc-add><?php esc_html_e('Agregar servicio', 'sitio-cero'); ?></button>
+            <template data-pc-template>
+                <div class="sitio-cero-pc-row" data-pc-row>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_online_item_label[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                        <input type="url" class="widefat" name="sitio_cero_pc_online_item_url[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                        <select class="widefat" name="sitio_cero_pc_online_item_target[]">
+                            <option value=""><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                            <option value="_blank"><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                        </select>
+                    </div>
+                    <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+
+        <hr>
+        <h3><?php esc_html_e('Recursos y documentos', 'sitio-cero'); ?></h3>
+        <div class="sitio-cero-pc-grid">
+            <p>
+                <label for="sitio_cero_pc_recursos_kicker"><strong><?php esc_html_e('Kicker', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_recursos_kicker" name="sitio_cero_pc_recursos_kicker" type="text" class="widefat" value="<?php echo esc_attr($data['recursos']['kicker']); ?>">
+            </p>
+            <p>
+                <label for="sitio_cero_pc_recursos_title"><strong><?php esc_html_e('Título', 'sitio-cero'); ?></strong></label>
+                <input id="sitio_cero_pc_recursos_title" name="sitio_cero_pc_recursos_title" type="text" class="widefat" value="<?php echo esc_attr($data['recursos']['title']); ?>">
+            </p>
+        </div>
+        <p class="description"><?php esc_html_e('Cada item es un acordeón. Puedes usar HTML (ul, li, a, h3, p).', 'sitio-cero'); ?></p>
+        <div class="sitio-cero-pc-repeater" data-pc-repeater>
+            <div class="sitio-cero-pc-list" data-pc-list>
+                <?php foreach ($recursos_items as $item) : ?>
+                    <div class="sitio-cero-pc-row sitio-cero-pc-row--stack" data-pc-row>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Título del acordeón', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_recursos_item_title[]" value="<?php echo esc_attr((string) ($item['title'] ?? '')); ?>">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Anchor (opcional)', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_pc_recursos_item_anchor[]" value="<?php echo esc_attr((string) ($item['anchor'] ?? '')); ?>" placeholder="ccosoc">
+                        </div>
+                        <div class="sitio-cero-pc-field">
+                            <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                            <textarea class="widefat" rows="8" name="sitio_cero_pc_recursos_item_content[]"><?php echo esc_textarea((string) ($item['content'] ?? '')); ?></textarea>
+                        </div>
+                        <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="button button-secondary" data-pc-add><?php esc_html_e('Agregar acordeón', 'sitio-cero'); ?></button>
+            <template data-pc-template>
+                <div class="sitio-cero-pc-row sitio-cero-pc-row--stack" data-pc-row>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Título del acordeón', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_recursos_item_title[]" value="">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Anchor (opcional)', 'sitio-cero'); ?></strong></label>
+                        <input type="text" class="widefat" name="sitio_cero_pc_recursos_item_anchor[]" value="" placeholder="ccosoc">
+                    </div>
+                    <div class="sitio-cero-pc-field">
+                        <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                        <textarea class="widefat" rows="8" name="sitio_cero_pc_recursos_item_content[]"></textarea>
+                    </div>
+                    <button type="button" class="button-link-delete" data-pc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                </div>
+            </template>
+        </div>
+    </div>
+    <?php
+}
+
+function sitio_cero_collect_participacion_link_items($labels, $urls, $targets)
+{
+    $items = array();
+    $labels = is_array($labels) ? $labels : array();
+    $urls = is_array($urls) ? $urls : array();
+    $targets = is_array($targets) ? $targets : array();
+    $count = max(count($labels), count($urls), count($targets));
+
+    for ($i = 0; $i < $count; $i++) {
+        $label = isset($labels[$i]) ? sanitize_text_field((string) $labels[$i]) : '';
+        $url = isset($urls[$i]) ? esc_url_raw((string) $urls[$i]) : '';
+        $target = isset($targets[$i]) && '_blank' === $targets[$i] ? '_blank' : '';
+
+        if ('' === $label && '' === $url) {
             continue;
         }
 
-        wp_update_post(
-            array(
-                'ID'           => (int) $post->ID,
-                'post_content' => $content,
-            )
+        $items[] = array(
+            'label'  => $label,
+            'url'    => $url,
+            'target' => $target,
         );
     }
 
-    update_option($content_option, $content_version);
+    return $items;
 }
-add_action('init', 'sitio_cero_refresh_participacion_ciudadana_content', 52);
+
+function sitio_cero_collect_participacion_nav_items($labels, $urls)
+{
+    $items = array();
+    $labels = is_array($labels) ? $labels : array();
+    $urls = is_array($urls) ? $urls : array();
+    $count = max(count($labels), count($urls));
+
+    for ($i = 0; $i < $count; $i++) {
+        $label = isset($labels[$i]) ? sanitize_text_field((string) $labels[$i]) : '';
+        $url = isset($urls[$i]) ? esc_url_raw((string) $urls[$i]) : '';
+
+        if ('' === $label && '' === $url) {
+            continue;
+        }
+
+        $items[] = array(
+            'label' => $label,
+            'url'   => $url,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_collect_participacion_recursos_items($titles, $anchors, $contents)
+{
+    $items = array();
+    $titles = is_array($titles) ? $titles : array();
+    $anchors = is_array($anchors) ? $anchors : array();
+    $contents = is_array($contents) ? $contents : array();
+    $count = max(count($titles), count($anchors), count($contents));
+
+    for ($i = 0; $i < $count; $i++) {
+        $title = isset($titles[$i]) ? sanitize_text_field((string) $titles[$i]) : '';
+        $anchor = isset($anchors[$i]) ? sanitize_title(ltrim((string) $anchors[$i], '#')) : '';
+        $content = isset($contents[$i]) ? sitio_cero_sanitize_direccion_html((string) $contents[$i]) : '';
+
+        if ('' === $title && '' === trim((string) wp_strip_all_tags($content))) {
+            continue;
+        }
+
+        $items[] = array(
+            'title'   => $title,
+            'anchor'  => $anchor,
+            'content' => $content,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_save_participacion_ciudadana_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_participacion_ciudadana_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_participacion_ciudadana_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_participacion_ciudadana_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $hero_eyebrow = isset($_POST['sitio_cero_pc_hero_eyebrow']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_hero_eyebrow'])) : '';
+    $hero_title = isset($_POST['sitio_cero_pc_hero_title']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_hero_title'])) : '';
+    $hero_lead = isset($_POST['sitio_cero_pc_hero_lead']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_hero_lead'])) : '';
+
+    update_post_meta($post_id, 'sitio_cero_pc_hero_eyebrow', $hero_eyebrow);
+    update_post_meta($post_id, 'sitio_cero_pc_hero_title', $hero_title);
+    update_post_meta($post_id, 'sitio_cero_pc_hero_lead', $hero_lead);
+
+    $hero_actions = sitio_cero_collect_participacion_link_items(
+        isset($_POST['sitio_cero_pc_hero_action_label']) ? wp_unslash($_POST['sitio_cero_pc_hero_action_label']) : array(),
+        isset($_POST['sitio_cero_pc_hero_action_url']) ? wp_unslash($_POST['sitio_cero_pc_hero_action_url']) : array(),
+        isset($_POST['sitio_cero_pc_hero_action_target']) ? wp_unslash($_POST['sitio_cero_pc_hero_action_target']) : array()
+    );
+    if (!empty($hero_actions)) {
+        update_post_meta($post_id, 'sitio_cero_pc_hero_actions', $hero_actions);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_pc_hero_actions');
+    }
+
+    $subnav_items = sitio_cero_collect_participacion_nav_items(
+        isset($_POST['sitio_cero_pc_subnav_label']) ? wp_unslash($_POST['sitio_cero_pc_subnav_label']) : array(),
+        isset($_POST['sitio_cero_pc_subnav_url']) ? wp_unslash($_POST['sitio_cero_pc_subnav_url']) : array()
+    );
+    if (!empty($subnav_items)) {
+        update_post_meta($post_id, 'sitio_cero_pc_subnav_items', $subnav_items);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_pc_subnav_items');
+    }
+
+    $audiencias_kicker = isset($_POST['sitio_cero_pc_audiencias_kicker']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_audiencias_kicker'])) : '';
+    $audiencias_title = isset($_POST['sitio_cero_pc_audiencias_title']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_audiencias_title'])) : '';
+    $audiencias_body = isset($_POST['sitio_cero_pc_audiencias_body']) ? sitio_cero_sanitize_direccion_html(wp_unslash($_POST['sitio_cero_pc_audiencias_body'])) : '';
+
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_kicker', $audiencias_kicker);
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_title', $audiencias_title);
+    update_post_meta($post_id, 'sitio_cero_pc_audiencias_body', $audiencias_body);
+
+    $audiencias_links = sitio_cero_collect_participacion_link_items(
+        isset($_POST['sitio_cero_pc_audiencias_link_label']) ? wp_unslash($_POST['sitio_cero_pc_audiencias_link_label']) : array(),
+        isset($_POST['sitio_cero_pc_audiencias_link_url']) ? wp_unslash($_POST['sitio_cero_pc_audiencias_link_url']) : array(),
+        isset($_POST['sitio_cero_pc_audiencias_link_target']) ? wp_unslash($_POST['sitio_cero_pc_audiencias_link_target']) : array()
+    );
+    if (!empty($audiencias_links)) {
+        update_post_meta($post_id, 'sitio_cero_pc_audiencias_links', $audiencias_links);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_pc_audiencias_links');
+    }
+
+    $kit_kicker = isset($_POST['sitio_cero_pc_kit_kicker']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_kit_kicker'])) : '';
+    $kit_title = isset($_POST['sitio_cero_pc_kit_title']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_kit_title'])) : '';
+    update_post_meta($post_id, 'sitio_cero_pc_kit_kicker', $kit_kicker);
+    update_post_meta($post_id, 'sitio_cero_pc_kit_title', $kit_title);
+
+    $kit_items = sitio_cero_collect_participacion_link_items(
+        isset($_POST['sitio_cero_pc_kit_item_label']) ? wp_unslash($_POST['sitio_cero_pc_kit_item_label']) : array(),
+        isset($_POST['sitio_cero_pc_kit_item_url']) ? wp_unslash($_POST['sitio_cero_pc_kit_item_url']) : array(),
+        isset($_POST['sitio_cero_pc_kit_item_target']) ? wp_unslash($_POST['sitio_cero_pc_kit_item_target']) : array()
+    );
+    if (!empty($kit_items)) {
+        update_post_meta($post_id, 'sitio_cero_pc_kit_items', $kit_items);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_pc_kit_items');
+    }
+
+    $online_kicker = isset($_POST['sitio_cero_pc_online_kicker']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_online_kicker'])) : '';
+    $online_title = isset($_POST['sitio_cero_pc_online_title']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_online_title'])) : '';
+    update_post_meta($post_id, 'sitio_cero_pc_online_kicker', $online_kicker);
+    update_post_meta($post_id, 'sitio_cero_pc_online_title', $online_title);
+
+    $online_items = sitio_cero_collect_participacion_link_items(
+        isset($_POST['sitio_cero_pc_online_item_label']) ? wp_unslash($_POST['sitio_cero_pc_online_item_label']) : array(),
+        isset($_POST['sitio_cero_pc_online_item_url']) ? wp_unslash($_POST['sitio_cero_pc_online_item_url']) : array(),
+        isset($_POST['sitio_cero_pc_online_item_target']) ? wp_unslash($_POST['sitio_cero_pc_online_item_target']) : array()
+    );
+    if (!empty($online_items)) {
+        update_post_meta($post_id, 'sitio_cero_pc_online_items', $online_items);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_pc_online_items');
+    }
+
+    $recursos_kicker = isset($_POST['sitio_cero_pc_recursos_kicker']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_recursos_kicker'])) : '';
+    $recursos_title = isset($_POST['sitio_cero_pc_recursos_title']) ? sanitize_text_field(wp_unslash($_POST['sitio_cero_pc_recursos_title'])) : '';
+    update_post_meta($post_id, 'sitio_cero_pc_recursos_kicker', $recursos_kicker);
+    update_post_meta($post_id, 'sitio_cero_pc_recursos_title', $recursos_title);
+
+    $recursos_items = sitio_cero_collect_participacion_recursos_items(
+        isset($_POST['sitio_cero_pc_recursos_item_title']) ? wp_unslash($_POST['sitio_cero_pc_recursos_item_title']) : array(),
+        isset($_POST['sitio_cero_pc_recursos_item_anchor']) ? wp_unslash($_POST['sitio_cero_pc_recursos_item_anchor']) : array(),
+        isset($_POST['sitio_cero_pc_recursos_item_content']) ? wp_unslash($_POST['sitio_cero_pc_recursos_item_content']) : array()
+    );
+    if (!empty($recursos_items)) {
+        update_post_meta($post_id, 'sitio_cero_pc_recursos_items', $recursos_items);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_pc_recursos_items');
+    }
+}
+add_action('save_post_participacion_c', 'sitio_cero_save_participacion_ciudadana_meta');
+
+function sitio_cero_enqueue_participacion_ciudadana_admin_assets($hook_suffix)
+{
+    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || 'participacion_c' !== $screen->post_type) {
+        return;
+    }
+
+    $version = wp_get_theme()->get('Version');
+
+    wp_enqueue_style(
+        'sitio-cero-admin-participacion-ciudadana',
+        get_template_directory_uri() . '/assets/css/admin-participacion-ciudadana.css',
+        array(),
+        $version
+    );
+
+    wp_enqueue_script(
+        'sitio-cero-admin-participacion-ciudadana',
+        get_template_directory_uri() . '/assets/js/admin-participacion-ciudadana.js',
+        array('jquery'),
+        $version,
+        true
+    );
+}
+add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_participacion_ciudadana_admin_assets');
 
 function sitio_cero_get_default_municipalidad_pages()
 {
@@ -3770,55 +5008,6 @@ function sitio_cero_sanitize_direccion_subtabs($value)
     return $items;
 }
 
-function sitio_cero_get_direccion_accordion_items($post_id)
-{
-    $post_id = absint($post_id);
-    if ($post_id <= 0) {
-        return array();
-    }
-
-    $raw_items = get_post_meta($post_id, 'sitio_cero_direccion_acordeon_items', true);
-    if (!is_array($raw_items)) {
-        return array();
-    }
-
-    $items = array();
-    foreach ($raw_items as $item) {
-        if (!is_array($item)) {
-            continue;
-        }
-
-        $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
-        $content = isset($item['content']) ? sitio_cero_sanitize_direccion_html((string) $item['content']) : '';
-        $border = isset($item['border']) ? sitio_cero_sanitize_css_shorthand((string) $item['border'], 80) : '';
-        $margin = isset($item['margin']) ? sitio_cero_sanitize_css_shorthand((string) $item['margin'], 60) : '';
-        $padding = isset($item['padding']) ? sitio_cero_sanitize_css_shorthand((string) $item['padding'], 60) : '';
-        $subtabs = isset($item['subtabs']) ? sitio_cero_sanitize_direccion_subtabs($item['subtabs']) : array();
-
-        if (empty($subtabs) && '' !== trim(wp_strip_all_tags($content))) {
-            // Backward compatibility: migrate legacy item content into one subtab.
-            $subtabs[] = array(
-                'title'   => __('Detalle', 'sitio-cero'),
-                'content' => $content,
-            );
-        }
-
-        if ('' === $title) {
-            continue;
-        }
-
-        $items[] = array(
-            'title'   => $title,
-            'border'  => $border,
-            'margin'  => $margin,
-            'padding' => $padding,
-            'subtabs' => $subtabs,
-        );
-    }
-
-    return $items;
-}
-
 function sitio_cero_sanitize_direccion_resource_blocks($value)
 {
     if (is_string($value)) {
@@ -3953,36 +5142,6 @@ function sitio_cero_render_direccion_municipal_metabox($post)
         'documentos' => __('Documentos', 'sitio-cero'),
         'archivos'   => __('Archivos', 'sitio-cero'),
     );
-    $acordeon_embed_options = array();
-    if (post_type_exists('acordeon_embed')) {
-        $acordeon_posts = get_posts(
-            array(
-                'post_type'      => 'acordeon_embed',
-                'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-                'posts_per_page' => -1,
-                'orderby'        => 'title',
-                'order'          => 'ASC',
-                'no_found_rows'  => true,
-            )
-        );
-
-        foreach ($acordeon_posts as $acordeon_post) {
-            if (!$acordeon_post instanceof WP_Post) {
-                continue;
-            }
-
-            $post_title = trim((string) $acordeon_post->post_title);
-            if ('' === $post_title) {
-                $post_title = sprintf(__('Acordeon #%d', 'sitio-cero'), (int) $acordeon_post->ID);
-            }
-
-            $acordeon_embed_options[] = array(
-                'id'    => (int) $acordeon_post->ID,
-                'title' => sanitize_text_field($post_title),
-            );
-        }
-    }
-
     $resource_blocks = sitio_cero_get_direccion_resource_blocks($post->ID);
 
     if (empty($resource_blocks)) {
@@ -4112,28 +5271,6 @@ function sitio_cero_render_direccion_municipal_metabox($post)
                             <label><strong><?php esc_html_e('Texto / HTML / embebido del bloque (opcional)', 'sitio-cero'); ?></strong></label>
                             <textarea id="<?php echo esc_attr($block_html_id); ?>" class="widefat" rows="5" name="sitio_cero_direccion_resource_block_html[]" placeholder="<?php esc_attr_e('Ejemplo: <p>Informacion del bloque...</p><iframe ...></iframe>', 'sitio-cero'); ?>"><?php echo esc_textarea($block_html); ?></textarea>
                         </p>
-                        <div class="sitio-cero-dm-embed-picker">
-                            <label><strong><?php esc_html_e('Insertar acordeon embebido (opcional)', 'sitio-cero'); ?></strong></label>
-                            <div class="sitio-cero-dm-embed-picker__controls">
-                                <select class="widefat" data-embed-shortcode-select data-target="#<?php echo esc_attr($block_html_id); ?>"<?php disabled(empty($acordeon_embed_options)); ?>>
-                                    <option value=""><?php esc_html_e('Selecciona un acordeon...', 'sitio-cero'); ?></option>
-                                    <?php foreach ($acordeon_embed_options as $acordeon_option) : ?>
-                                        <option value="<?php echo esc_attr((string) $acordeon_option['id']); ?>"><?php echo esc_html($acordeon_option['title']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="button" class="button button-secondary" data-embed-shortcode-insert data-target="#<?php echo esc_attr($block_html_id); ?>"<?php disabled(empty($acordeon_embed_options)); ?>>
-                                    <?php esc_html_e('Insertar acordeon', 'sitio-cero'); ?>
-                                </button>
-                            </div>
-                            <p class="description">
-                                <?php if (empty($acordeon_embed_options)) : ?>
-                                    <?php esc_html_e('Aun no hay acordeones creados. Crea uno en Acordeones para poder insertarlo.', 'sitio-cero'); ?>
-                                <?php else : ?>
-                                    <?php esc_html_e('Se insertara el shortcode del acordeon en este campo.', 'sitio-cero'); ?>
-                                <?php endif; ?>
-                            </p>
-                        </div>
-
                         <p><strong><?php esc_html_e('Items del bloque (titulo + enlace + icono)', 'sitio-cero'); ?></strong></p>
                         <div class="sitio-cero-aviso-files" data-target="#<?php echo esc_attr($block_links_id); ?>">
                             <div class="sitio-cero-aviso-files__actions">
@@ -4208,28 +5345,6 @@ function sitio_cero_render_direccion_municipal_metabox($post)
                         <label><strong><?php esc_html_e('Texto / HTML / embebido del bloque (opcional)', 'sitio-cero'); ?></strong></label>
                         <textarea id="sitio_cero_direccion_resource_block_html___KEY__" class="widefat" rows="5" name="sitio_cero_direccion_resource_block_html[]" placeholder="<?php esc_attr_e('Ejemplo: <p>Informacion del bloque...</p><iframe ...></iframe>', 'sitio-cero'); ?>"></textarea>
                     </p>
-                    <div class="sitio-cero-dm-embed-picker">
-                        <label><strong><?php esc_html_e('Insertar acordeon embebido (opcional)', 'sitio-cero'); ?></strong></label>
-                        <div class="sitio-cero-dm-embed-picker__controls">
-                            <select class="widefat" data-embed-shortcode-select data-target="#sitio_cero_direccion_resource_block_html___KEY__"<?php disabled(empty($acordeon_embed_options)); ?>>
-                                <option value=""><?php esc_html_e('Selecciona un acordeon...', 'sitio-cero'); ?></option>
-                                <?php foreach ($acordeon_embed_options as $acordeon_option) : ?>
-                                    <option value="<?php echo esc_attr((string) $acordeon_option['id']); ?>"><?php echo esc_html($acordeon_option['title']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="button" class="button button-secondary" data-embed-shortcode-insert data-target="#sitio_cero_direccion_resource_block_html___KEY__"<?php disabled(empty($acordeon_embed_options)); ?>>
-                                <?php esc_html_e('Insertar acordeon', 'sitio-cero'); ?>
-                            </button>
-                        </div>
-                        <p class="description">
-                            <?php if (empty($acordeon_embed_options)) : ?>
-                                <?php esc_html_e('Aun no hay acordeones creados. Crea uno en Acordeones para poder insertarlo.', 'sitio-cero'); ?>
-                            <?php else : ?>
-                                <?php esc_html_e('Se insertara el shortcode del acordeon en este campo.', 'sitio-cero'); ?>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-
                     <p><strong><?php esc_html_e('Items del bloque (titulo + enlace + icono)', 'sitio-cero'); ?></strong></p>
                     <div class="sitio-cero-aviso-files" data-target="#sitio_cero_direccion_resource_block_links___KEY__">
                         <div class="sitio-cero-aviso-files__actions">
@@ -4265,27 +5380,6 @@ function sitio_cero_render_direccion_municipal_metabox($post)
             <label for="sitio_cero_direccion_custom_html"><strong><?php esc_html_e('HTML libre (video, embebidos, estructura)', 'sitio-cero'); ?></strong></label>
             <textarea id="sitio_cero_direccion_custom_html" name="sitio_cero_direccion_custom_html" class="widefat" rows="7" placeholder="<?php esc_attr_e('Ejemplo: <h3>Atencion ciudadana</h3><p>Texto...</p><iframe ...></iframe>', 'sitio-cero'); ?>"><?php echo esc_textarea($custom_html); ?></textarea>
         </p>
-        <div class="sitio-cero-dm-embed-picker">
-            <label><strong><?php esc_html_e('Insertar acordeon embebido (opcional)', 'sitio-cero'); ?></strong></label>
-            <div class="sitio-cero-dm-embed-picker__controls">
-                <select class="widefat" data-embed-shortcode-select data-target="#sitio_cero_direccion_custom_html"<?php disabled(empty($acordeon_embed_options)); ?>>
-                    <option value=""><?php esc_html_e('Selecciona un acordeon...', 'sitio-cero'); ?></option>
-                    <?php foreach ($acordeon_embed_options as $acordeon_option) : ?>
-                        <option value="<?php echo esc_attr((string) $acordeon_option['id']); ?>"><?php echo esc_html($acordeon_option['title']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" class="button button-secondary" data-embed-shortcode-insert data-target="#sitio_cero_direccion_custom_html"<?php disabled(empty($acordeon_embed_options)); ?>>
-                    <?php esc_html_e('Insertar acordeon', 'sitio-cero'); ?>
-                </button>
-            </div>
-            <p class="description">
-                <?php if (empty($acordeon_embed_options)) : ?>
-                    <?php esc_html_e('Aun no hay acordeones creados. Crea uno en Acordeones para poder insertarlo.', 'sitio-cero'); ?>
-                <?php else : ?>
-                    <?php esc_html_e('Se insertara el shortcode del acordeon en este campo.', 'sitio-cero'); ?>
-                <?php endif; ?>
-            </p>
-        </div>
         <p>
             <label for="sitio_cero_direccion_custom_css"><strong><?php esc_html_e('CSS libre (opcional)', 'sitio-cero'); ?></strong></label>
             <textarea id="sitio_cero_direccion_custom_css" name="sitio_cero_direccion_custom_css" class="widefat" rows="6" placeholder="<?php esc_attr_e('Usa {{selector}} para apuntar este contenido.', 'sitio-cero'); ?>"><?php echo esc_textarea($custom_css); ?></textarea>
@@ -7712,374 +8806,6 @@ function sitio_cero_show_clone_lamina_notice()
     echo '</p></div>';
 }
 add_action('admin_notices', 'sitio_cero_show_clone_lamina_notice');
-
-function sitio_cero_register_acordeon_embed_post_type()
-{
-    $labels = array(
-        'name'               => __('Acordeones', 'sitio-cero'),
-        'singular_name'      => __('Acordeon', 'sitio-cero'),
-        'menu_name'          => __('Acordeones', 'sitio-cero'),
-        'name_admin_bar'     => __('Acordeon', 'sitio-cero'),
-        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
-        'add_new_item'       => __('Agregar acordeon', 'sitio-cero'),
-        'new_item'           => __('Nuevo acordeon', 'sitio-cero'),
-        'edit_item'          => __('Editar acordeon', 'sitio-cero'),
-        'view_item'          => __('Ver acordeon', 'sitio-cero'),
-        'all_items'          => __('Todos los acordeones', 'sitio-cero'),
-        'search_items'       => __('Buscar acordeones', 'sitio-cero'),
-        'not_found'          => __('No se encontraron acordeones.', 'sitio-cero'),
-        'not_found_in_trash' => __('No hay acordeones en la papelera.', 'sitio-cero'),
-    );
-
-    register_post_type(
-        'acordeon_embed',
-        array(
-            'labels'             => $labels,
-            'public'             => false,
-            'show_ui'            => true,
-            'show_in_menu'       => true,
-            'show_in_admin_bar'  => true,
-            'show_in_rest'       => true,
-            'publicly_queryable' => false,
-            'exclude_from_search'=> true,
-            'has_archive'        => false,
-            'menu_position'      => 24,
-            'menu_icon'          => 'dashicons-editor-ol',
-            'supports'           => array('title', 'revisions'),
-        )
-    );
-}
-add_action('init', 'sitio_cero_register_acordeon_embed_post_type');
-
-function sitio_cero_enqueue_acordeon_embed_admin_assets($hook_suffix)
-{
-    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
-        return;
-    }
-
-    $screen = get_current_screen();
-    if (!$screen || 'acordeon_embed' !== $screen->post_type) {
-        return;
-    }
-
-    $version = wp_get_theme()->get('Version');
-
-    wp_enqueue_style(
-        'sitio-cero-admin-acordeon-embed',
-        get_template_directory_uri() . '/assets/css/admin-acordeon-embed.css',
-        array(),
-        $version
-    );
-
-    wp_enqueue_script(
-        'sitio-cero-admin-acordeon-embed',
-        get_template_directory_uri() . '/assets/js/admin-acordeon-embed.js',
-        array('jquery'),
-        $version,
-        true
-    );
-}
-add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_acordeon_embed_admin_assets');
-
-function sitio_cero_get_acordeon_embed_items($post_id)
-{
-    $post_id = absint($post_id);
-    if ($post_id <= 0) {
-        return array();
-    }
-
-    $raw_items = get_post_meta($post_id, 'sitio_cero_acordeon_embed_items', true);
-    if (!is_array($raw_items)) {
-        return array();
-    }
-
-    $items = array();
-    foreach ($raw_items as $item) {
-        if (!is_array($item)) {
-            continue;
-        }
-
-        $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
-        $content = isset($item['content']) ? wp_kses_post((string) $item['content']) : '';
-        if ('' === $title && '' === trim((string) wp_strip_all_tags($content))) {
-            continue;
-        }
-
-        $items[] = array(
-            'title'   => $title,
-            'content' => $content,
-        );
-    }
-
-    return $items;
-}
-
-function sitio_cero_add_acordeon_embed_metaboxes()
-{
-    add_meta_box(
-        'sitio_cero_acordeon_embed_items',
-        __('Items del acordeon', 'sitio-cero'),
-        'sitio_cero_render_acordeon_embed_metabox',
-        'acordeon_embed',
-        'normal',
-        'high'
-    );
-}
-add_action('add_meta_boxes', 'sitio_cero_add_acordeon_embed_metaboxes');
-
-function sitio_cero_render_acordeon_embed_metabox($post)
-{
-    wp_nonce_field('sitio_cero_save_acordeon_embed_meta', 'sitio_cero_acordeon_embed_meta_nonce');
-
-    $items = sitio_cero_get_acordeon_embed_items($post->ID);
-    if (empty($items)) {
-        $items = array(
-            array(
-                'title'   => __('Informacion general', 'sitio-cero'),
-                'content' => '<p>' . __('Aqui puedes agregar informacion para este item del acordeon.', 'sitio-cero') . '</p>',
-            ),
-        );
-    }
-    ?>
-    <div class="sitio-cero-acordeon-embed-admin" data-acordeon-admin-root>
-        <p class="description">
-            <?php esc_html_e('Inserta este acordeon donde quieras usando el shortcode:', 'sitio-cero'); ?>
-            <code>[acordeon id="<?php echo esc_html((string) $post->ID); ?>"]</code>
-        </p>
-
-        <div class="sitio-cero-acordeon-embed-admin__list" data-acordeon-admin-list>
-            <?php foreach ($items as $index => $item) : ?>
-                <?php
-                $item_title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
-                $item_content = isset($item['content']) ? (string) $item['content'] : '';
-                ?>
-                <div class="sitio-cero-acordeon-embed-admin__row" data-acordeon-admin-row>
-                    <div class="sitio-cero-acordeon-embed-admin__row-head">
-                        <strong><?php echo esc_html(sprintf(__('Item %d', 'sitio-cero'), $index + 1)); ?></strong>
-                        <button type="button" class="button-link-delete" data-acordeon-admin-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
-                    </div>
-                    <p>
-                        <label><strong><?php esc_html_e('Titulo', 'sitio-cero'); ?></strong></label>
-                        <input type="text" class="widefat" name="sitio_cero_acordeon_embed_item_title[]" value="<?php echo esc_attr($item_title); ?>" placeholder="<?php esc_attr_e('Ejemplo: Requisitos', 'sitio-cero'); ?>">
-                    </p>
-                    <p>
-                        <label><strong><?php esc_html_e('Contenido (HTML permitido)', 'sitio-cero'); ?></strong></label>
-                        <textarea class="widefat" rows="5" name="sitio_cero_acordeon_embed_item_content[]" placeholder="<?php esc_attr_e('Texto del item...', 'sitio-cero'); ?>"><?php echo esc_textarea($item_content); ?></textarea>
-                    </p>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-        <button type="button" class="button button-primary" data-acordeon-admin-add><?php esc_html_e('Agregar item', 'sitio-cero'); ?></button>
-
-        <template data-acordeon-admin-template>
-            <div class="sitio-cero-acordeon-embed-admin__row" data-acordeon-admin-row>
-                <div class="sitio-cero-acordeon-embed-admin__row-head">
-                    <strong><?php esc_html_e('Item', 'sitio-cero'); ?></strong>
-                    <button type="button" class="button-link-delete" data-acordeon-admin-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
-                </div>
-                <p>
-                    <label><strong><?php esc_html_e('Titulo', 'sitio-cero'); ?></strong></label>
-                    <input type="text" class="widefat" name="sitio_cero_acordeon_embed_item_title[]" value="" placeholder="<?php esc_attr_e('Ejemplo: Requisitos', 'sitio-cero'); ?>">
-                </p>
-                <p>
-                    <label><strong><?php esc_html_e('Contenido (HTML permitido)', 'sitio-cero'); ?></strong></label>
-                    <textarea class="widefat" rows="5" name="sitio_cero_acordeon_embed_item_content[]" placeholder="<?php esc_attr_e('Texto del item...', 'sitio-cero'); ?>"></textarea>
-                </p>
-            </div>
-        </template>
-    </div>
-    <?php
-}
-
-function sitio_cero_save_acordeon_embed_meta($post_id)
-{
-    if (!isset($_POST['sitio_cero_acordeon_embed_meta_nonce'])) {
-        return;
-    }
-
-    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_acordeon_embed_meta_nonce']));
-    if (!wp_verify_nonce($nonce, 'sitio_cero_save_acordeon_embed_meta')) {
-        return;
-    }
-
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-        return;
-    }
-
-    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
-        return;
-    }
-
-    if (!current_user_can('edit_post', $post_id)) {
-        return;
-    }
-
-    $titles = isset($_POST['sitio_cero_acordeon_embed_item_title']) && is_array($_POST['sitio_cero_acordeon_embed_item_title'])
-        ? wp_unslash($_POST['sitio_cero_acordeon_embed_item_title'])
-        : array();
-    $contents = isset($_POST['sitio_cero_acordeon_embed_item_content']) && is_array($_POST['sitio_cero_acordeon_embed_item_content'])
-        ? wp_unslash($_POST['sitio_cero_acordeon_embed_item_content'])
-        : array();
-
-    $total = max(count($titles), count($contents));
-    $items = array();
-
-    for ($index = 0; $index < $total; $index++) {
-        $title = isset($titles[$index]) ? sanitize_text_field((string) $titles[$index]) : '';
-        $content = isset($contents[$index]) ? wp_kses_post((string) $contents[$index]) : '';
-
-        if ('' === $title && '' === trim((string) wp_strip_all_tags($content))) {
-            continue;
-        }
-
-        $items[] = array(
-            'title'   => $title,
-            'content' => $content,
-        );
-    }
-
-    if (!empty($items)) {
-        update_post_meta($post_id, 'sitio_cero_acordeon_embed_items', $items);
-    } else {
-        delete_post_meta($post_id, 'sitio_cero_acordeon_embed_items');
-    }
-}
-add_action('save_post_acordeon_embed', 'sitio_cero_save_acordeon_embed_meta');
-
-function sitio_cero_shortcode_acordeon($atts = array())
-{
-    $atts = shortcode_atts(
-        array(
-            'id' => 0,
-        ),
-        $atts,
-        'acordeon'
-    );
-
-    $post_id = absint($atts['id']);
-    if ($post_id <= 0) {
-        return '';
-    }
-
-    $post = get_post($post_id);
-    if (!$post instanceof WP_Post || 'acordeon_embed' !== $post->post_type) {
-        return '';
-    }
-
-    if ('publish' !== get_post_status($post_id) && !current_user_can('read_post', $post_id)) {
-        return '';
-    }
-
-    $items = sitio_cero_get_acordeon_embed_items($post_id);
-    if (empty($items)) {
-        return '';
-    }
-
-    $uid = wp_unique_id('sc-accordion-');
-
-    ob_start();
-    ?>
-    <div class="sc-accordion-container" data-sc-accordion id="<?php echo esc_attr($uid); ?>">
-        <?php foreach ($items as $index => $item) : ?>
-            <?php
-            $item_title = isset($item['title']) ? (string) $item['title'] : '';
-            $item_content = isset($item['content']) ? (string) $item['content'] : '';
-            $content_id = $uid . '-content-' . $index;
-            ?>
-            <div class="sc-accordion-item">
-                <button class="sc-accordion-header" type="button" aria-expanded="false" aria-controls="<?php echo esc_attr($content_id); ?>">
-                    <span><?php echo esc_html($item_title); ?></span>
-                    <span class="sc-accordion-icon" aria-hidden="true">+</span>
-                </button>
-                <div class="sc-accordion-content" id="<?php echo esc_attr($content_id); ?>" hidden>
-                    <div class="sc-accordion-body">
-                        <?php echo wpautop(wp_kses_post($item_content)); ?>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
-    <?php
-
-    return (string) ob_get_clean();
-}
-add_shortcode('acordeon', 'sitio_cero_shortcode_acordeon');
-
-function sitio_cero_get_default_acordeon_embed_items()
-{
-    return array(
-        array('title' => __('Informacion general', 'sitio-cero'), 'content' => '<p>Resumen inicial del servicio y su alcance para la comunidad.</p>'),
-        array('title' => __('Requisitos', 'sitio-cero'), 'content' => '<ul><li>Documento de identidad vigente</li><li>Comprobante de domicilio</li><li>Formulario completo</li></ul>'),
-        array('title' => __('Documentos necesarios', 'sitio-cero'), 'content' => '<p>Adjunta archivos en formato PDF, DOC o imagen cuando corresponda.</p>'),
-        array('title' => __('Horarios de atencion', 'sitio-cero'), 'content' => '<p>Lunes a viernes de 08:30 a 14:00 hrs.</p>'),
-        array('title' => __('Canales de atencion', 'sitio-cero'), 'content' => '<p>Presencial, telefono y formulario web municipal.</p>'),
-        array('title' => __('Plazos estimados', 'sitio-cero'), 'content' => '<p>El tiempo de respuesta puede variar entre 5 y 15 dias habiles.</p>'),
-        array('title' => __('Costos y pagos', 'sitio-cero'), 'content' => '<p>Indica aqui si el tramite es gratuito o si requiere pago de derechos.</p>'),
-        array('title' => __('Preguntas frecuentes', 'sitio-cero'), 'content' => '<p>Incluye respuestas breves a dudas recurrentes de los vecinos.</p>'),
-        array('title' => __('Normativa aplicable', 'sitio-cero'), 'content' => '<p>Referencia leyes, ordenanzas o reglamentos que respaldan el proceso.</p>'),
-        array('title' => __('Contacto', 'sitio-cero'), 'content' => '<p>Email: contacto@municipio.cl<br>Telefono: +56 41 220 0000</p>'),
-    );
-}
-
-function sitio_cero_seed_default_acordeon_embed()
-{
-    if (!post_type_exists('acordeon_embed')) {
-        return;
-    }
-
-    $seed_version = '1';
-    $already_seeded_version = (string) get_option('sitio_cero_default_acordeon_embed_seeded_version', '');
-    if ($seed_version === $already_seeded_version) {
-        return;
-    }
-
-    $title = __('Acordeon de ejemplo (10 items)', 'sitio-cero');
-    $slug = sanitize_title($title);
-
-    $existing = get_posts(
-        array(
-            'post_type'      => 'acordeon_embed',
-            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-            'name'           => $slug,
-            'posts_per_page' => 1,
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-        )
-    );
-
-    if (!empty($existing)) {
-        $post_id = (int) $existing[0];
-        wp_update_post(
-            array(
-                'ID'          => $post_id,
-                'post_title'  => $title,
-                'post_status' => 'publish',
-            )
-        );
-    } else {
-        $post_id = wp_insert_post(
-            array(
-                'post_type'   => 'acordeon_embed',
-                'post_status' => 'publish',
-                'post_title'  => $title,
-                'post_name'   => $slug,
-            ),
-            true
-        );
-    }
-
-    if (is_wp_error($post_id) || !$post_id) {
-        return;
-    }
-
-    $items = sitio_cero_get_default_acordeon_embed_items();
-    update_post_meta((int) $post_id, 'sitio_cero_acordeon_embed_items', $items);
-    update_post_meta((int) $post_id, '_sitio_cero_demo_acordeon_embed', '1');
-
-    update_option('sitio_cero_default_acordeon_embed_seeded_version', $seed_version);
-}
-add_action('init', 'sitio_cero_seed_default_acordeon_embed', 56);
 
 function sitio_cero_get_seo_supported_post_types()
 {
