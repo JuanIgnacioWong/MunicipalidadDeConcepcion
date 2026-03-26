@@ -1102,6 +1102,7 @@ function sitio_cero_enqueue_direccion_municipal_admin_assets($hook_suffix)
         array(
             'phoneLabel'             => __('Telefono', 'sitio-cero'),
             'resourceBlockLabel'     => __('Bloque', 'sitio-cero'),
+            'sectionLabel'           => __('Sección', 'sitio-cero'),
             'removeText'             => __('Quitar', 'sitio-cero'),
         )
     );
@@ -5053,6 +5054,142 @@ function sitio_cero_sanitize_direccion_resource_blocks($value)
     return $blocks;
 }
 
+function sitio_cero_sanitize_direccion_buttons($value)
+{
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        $value = is_array($decoded) ? $decoded : array();
+    }
+
+    if (!is_array($value)) {
+        return array();
+    }
+
+    $items = array();
+
+    foreach ($value as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+        $url = isset($item['url']) ? esc_url_raw((string) $item['url']) : '';
+        $target = isset($item['target']) && '_blank' === $item['target'] ? '_blank' : '';
+
+        if ('' === $label && '' === $url) {
+            continue;
+        }
+
+        $items[] = array(
+            'label'  => $label,
+            'url'    => $url,
+            'target' => $target,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_sanitize_direccion_accordions($value)
+{
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        $value = is_array($decoded) ? $decoded : array();
+    }
+
+    if (!is_array($value)) {
+        return array();
+    }
+
+    $items = array();
+
+    foreach ($value as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
+        $content = isset($item['content']) ? sitio_cero_sanitize_direccion_html((string) $item['content']) : '';
+
+        if ('' === $title && '' === trim((string) wp_strip_all_tags($content))) {
+            continue;
+        }
+
+        $items[] = array(
+            'title'   => $title,
+            'content' => $content,
+        );
+    }
+
+    return $items;
+}
+
+function sitio_cero_sanitize_direccion_sections($value)
+{
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        $value = is_array($decoded) ? $decoded : array();
+    }
+
+    if (!is_array($value)) {
+        return array();
+    }
+
+    $sections = array();
+    $valid_styles = array('paper', 'soft', 'dark');
+    $valid_button_styles = array('pill', 'card', 'card-dark');
+
+    foreach ($value as $section) {
+        if (!is_array($section)) {
+            continue;
+        }
+
+        $title = isset($section['title']) ? sanitize_text_field((string) $section['title']) : '';
+        $anchor = isset($section['anchor']) ? sanitize_title(ltrim((string) $section['anchor'], '#')) : '';
+        $kicker = isset($section['kicker']) ? sanitize_text_field((string) $section['kicker']) : '';
+        $content = isset($section['content']) ? sitio_cero_sanitize_direccion_html((string) $section['content']) : '';
+
+        $style = isset($section['style']) ? sanitize_key((string) $section['style']) : '';
+        if (!in_array($style, $valid_styles, true)) {
+            $style = '';
+        }
+
+        $buttons_style = isset($section['buttons_style']) ? sanitize_key((string) $section['buttons_style']) : '';
+        if (!in_array($buttons_style, $valid_button_styles, true)) {
+            $buttons_style = '';
+        }
+
+        $buttons = isset($section['buttons']) ? sitio_cero_sanitize_direccion_buttons($section['buttons']) : array();
+        $accordions = isset($section['accordions']) ? sitio_cero_sanitize_direccion_accordions($section['accordions']) : array();
+        $subtabs = isset($section['subtabs']) ? sitio_cero_sanitize_direccion_subtabs($section['subtabs']) : array();
+
+        if (
+            '' === $title
+            && '' === $kicker
+            && '' === trim((string) wp_strip_all_tags($content))
+            && empty($buttons)
+            && empty($accordions)
+            && empty($subtabs)
+        ) {
+            continue;
+        }
+
+        $sections[] = array(
+            'title'         => $title,
+            'anchor'        => $anchor,
+            'kicker'        => $kicker,
+            'content'       => $content,
+            'style'         => $style,
+            'buttons_style' => $buttons_style,
+            'buttons'       => $buttons,
+            'accordions'    => $accordions,
+            'subtabs'       => $subtabs,
+        );
+    }
+
+    return $sections;
+}
+
 function sitio_cero_get_direccion_resource_blocks($post_id)
 {
     $post_id = absint($post_id);
@@ -5066,6 +5203,21 @@ function sitio_cero_get_direccion_resource_blocks($post_id)
     }
 
     return sitio_cero_sanitize_direccion_resource_blocks($raw_blocks);
+}
+
+function sitio_cero_get_direccion_sections($post_id)
+{
+    $post_id = absint($post_id);
+    if ($post_id <= 0) {
+        return array();
+    }
+
+    $raw_sections = get_post_meta($post_id, 'sitio_cero_direccion_sections', true);
+    if (!is_array($raw_sections) && !is_string($raw_sections)) {
+        return array();
+    }
+
+    return sitio_cero_sanitize_direccion_sections($raw_sections);
 }
 
 function sitio_cero_render_direccion_municipal_metabox($post)
@@ -5143,6 +5295,9 @@ function sitio_cero_render_direccion_municipal_metabox($post)
         'archivos'   => __('Archivos', 'sitio-cero'),
     );
     $resource_blocks = sitio_cero_get_direccion_resource_blocks($post->ID);
+    $sections = function_exists('sitio_cero_get_direccion_sections')
+        ? sitio_cero_get_direccion_sections($post->ID)
+        : array();
 
     if (empty($resource_blocks)) {
         if ('' !== trim($documentos) || '' !== trim((string) wp_strip_all_tags($documentos_html)) || '' !== trim($documentos_titulo)) {
@@ -5172,6 +5327,18 @@ function sitio_cero_render_direccion_municipal_metabox($post)
             'links' => '',
         );
     }
+
+    $section_style_options = array(
+        ''      => __('Predeterminado', 'sitio-cero'),
+        'paper' => __('Papel', 'sitio-cero'),
+        'soft'  => __('Suave', 'sitio-cero'),
+        'dark'  => __('Oscuro', 'sitio-cero'),
+    );
+    $section_button_style_options = array(
+        'pill'      => __('Blanco', 'sitio-cero'),
+        'card'      => __('Azul A', 'sitio-cero'),
+        'card-dark' => __('Azul B', 'sitio-cero'),
+    );
 
     ?>
     <div class="sitio-cero-dm-metabox">
@@ -5384,6 +5551,333 @@ function sitio_cero_render_direccion_municipal_metabox($post)
             <label for="sitio_cero_direccion_custom_css"><strong><?php esc_html_e('CSS libre (opcional)', 'sitio-cero'); ?></strong></label>
             <textarea id="sitio_cero_direccion_custom_css" name="sitio_cero_direccion_custom_css" class="widefat" rows="6" placeholder="<?php esc_attr_e('Usa {{selector}} para apuntar este contenido.', 'sitio-cero'); ?>"><?php echo esc_textarea($custom_css); ?></textarea>
         </p>
+
+        <hr>
+        <h3><?php esc_html_e('Secciones adicionales', 'sitio-cero'); ?></h3>
+        <p class="description"><?php esc_html_e('Crea secciones que se agregan al final de la página. Cada sección puede incluir botones, acordeones y pestañas.', 'sitio-cero'); ?></p>
+
+        <div class="sitio-cero-dm-sections" data-dm-sections>
+            <div class="sitio-cero-dm-sections__list" data-dm-sections-list>
+                <?php foreach ($sections as $section_index => $section) : ?>
+                    <?php
+                    $section_title = isset($section['title']) ? (string) $section['title'] : '';
+                    $section_anchor = isset($section['anchor']) ? (string) $section['anchor'] : '';
+                    $section_kicker = isset($section['kicker']) ? (string) $section['kicker'] : '';
+                    $section_content = isset($section['content']) ? (string) $section['content'] : '';
+                    $section_style = isset($section['style']) ? (string) $section['style'] : '';
+                    $section_buttons_style = isset($section['buttons_style']) && '' !== $section['buttons_style']
+                        ? (string) $section['buttons_style']
+                        : 'pill';
+                    $section_buttons = isset($section['buttons']) && is_array($section['buttons']) ? $section['buttons'] : array();
+                    $section_accordions = isset($section['accordions']) && is_array($section['accordions']) ? $section['accordions'] : array();
+                    $section_subtabs = isset($section['subtabs']) && is_array($section['subtabs']) ? $section['subtabs'] : array();
+                    ?>
+                    <div class="sitio-cero-dm-section" data-dm-section-row data-section-index="<?php echo esc_attr((string) $section_index); ?>">
+                        <div class="sitio-cero-dm-section__head">
+                            <strong data-section-label><?php echo esc_html(sprintf(__('Sección %d', 'sitio-cero'), $section_index + 1)); ?></strong>
+                            <button type="button" class="button-link-delete" data-dm-section-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                        </div>
+
+                        <div class="sitio-cero-dm-grid">
+                            <p>
+                                <label><strong><?php esc_html_e('Título de la sección', 'sitio-cero'); ?></strong></label>
+                                <input type="text" class="widefat" name="sitio_cero_direccion_section_title[<?php echo esc_attr((string) $section_index); ?>]" data-name-template="sitio_cero_direccion_section_title[__SECTION__]" value="<?php echo esc_attr($section_title); ?>">
+                            </p>
+                            <p>
+                                <label><strong><?php esc_html_e('Anchor (opcional)', 'sitio-cero'); ?></strong></label>
+                                <input type="text" class="widefat" name="sitio_cero_direccion_section_anchor[<?php echo esc_attr((string) $section_index); ?>]" data-name-template="sitio_cero_direccion_section_anchor[__SECTION__]" value="<?php echo esc_attr($section_anchor); ?>" placeholder="mi-seccion">
+                            </p>
+                            <p>
+                                <label><strong><?php esc_html_e('Kicker (opcional)', 'sitio-cero'); ?></strong></label>
+                                <input type="text" class="widefat" name="sitio_cero_direccion_section_kicker[<?php echo esc_attr((string) $section_index); ?>]" data-name-template="sitio_cero_direccion_section_kicker[__SECTION__]" value="<?php echo esc_attr($section_kicker); ?>">
+                            </p>
+                            <p>
+                                <label><strong><?php esc_html_e('Estilo de fondo', 'sitio-cero'); ?></strong></label>
+                                <select class="widefat" name="sitio_cero_direccion_section_style[<?php echo esc_attr((string) $section_index); ?>]" data-name-template="sitio_cero_direccion_section_style[__SECTION__]">
+                                    <?php foreach ($section_style_options as $style_key => $style_label) : ?>
+                                        <option value="<?php echo esc_attr($style_key); ?>"<?php selected($section_style, $style_key); ?>><?php echo esc_html($style_label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </p>
+                        </div>
+
+                        <p>
+                            <label><strong><?php esc_html_e('Contenido principal (HTML)', 'sitio-cero'); ?></strong></label>
+                            <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_content[<?php echo esc_attr((string) $section_index); ?>]" data-name-template="sitio_cero_direccion_section_content[__SECTION__]"><?php echo esc_textarea($section_content); ?></textarea>
+                        </p>
+
+                        <div class="sitio-cero-dm-section__group">
+                            <div class="sitio-cero-dm-section__group-head">
+                                <strong><?php esc_html_e('Botones', 'sitio-cero'); ?></strong>
+                            </div>
+                            <p>
+                                <label><strong><?php esc_html_e('Estilo de botones', 'sitio-cero'); ?></strong></label>
+                                <select class="widefat" name="sitio_cero_direccion_section_buttons_style[<?php echo esc_attr((string) $section_index); ?>]" data-name-template="sitio_cero_direccion_section_buttons_style[__SECTION__]">
+                                    <?php foreach ($section_button_style_options as $style_key => $style_label) : ?>
+                                        <option value="<?php echo esc_attr($style_key); ?>"<?php selected($section_buttons_style, $style_key); ?>><?php echo esc_html($style_label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </p>
+                            <div class="sitio-cero-dm-repeater" data-dm-repeater>
+                                <div class="sitio-cero-dm-repeater__list" data-dm-list>
+                                    <?php foreach ($section_buttons as $button) : ?>
+                                        <?php
+                                        $button_label = isset($button['label']) ? (string) $button['label'] : '';
+                                        $button_url = isset($button['url']) ? (string) $button['url'] : '';
+                                        $button_target = isset($button['target']) ? (string) $button['target'] : '';
+                                        ?>
+                                        <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--actions" data-dm-row>
+                                            <p>
+                                                <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                                                <input type="text" class="widefat" name="sitio_cero_direccion_section_button_label[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_button_label[__SECTION__][]" value="<?php echo esc_attr($button_label); ?>">
+                                            </p>
+                                            <p>
+                                                <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                                                <input type="url" class="widefat" name="sitio_cero_direccion_section_button_url[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_button_url[__SECTION__][]" value="<?php echo esc_url($button_url); ?>">
+                                            </p>
+                                            <p>
+                                                <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                                                <select class="widefat" name="sitio_cero_direccion_section_button_target[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_button_target[__SECTION__][]">
+                                                    <option value=""<?php selected('', $button_target); ?>><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                                    <option value="_blank"<?php selected('_blank', $button_target); ?>><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                                                </select>
+                                            </p>
+                                            <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="button button-secondary" data-dm-add><?php esc_html_e('Agregar botón', 'sitio-cero'); ?></button>
+                                <template data-dm-template>
+                                    <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--actions" data-dm-row>
+                                        <p>
+                                            <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                                            <input type="text" class="widefat" name="sitio_cero_direccion_section_button_label[__SECTION__][]" data-name-template="sitio_cero_direccion_section_button_label[__SECTION__][]" value="">
+                                        </p>
+                                        <p>
+                                            <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                                            <input type="url" class="widefat" name="sitio_cero_direccion_section_button_url[__SECTION__][]" data-name-template="sitio_cero_direccion_section_button_url[__SECTION__][]" value="">
+                                        </p>
+                                        <p>
+                                            <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                                            <select class="widefat" name="sitio_cero_direccion_section_button_target[__SECTION__][]" data-name-template="sitio_cero_direccion_section_button_target[__SECTION__][]">
+                                                <option value=""><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                                <option value="_blank"><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                                            </select>
+                                        </p>
+                                        <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="sitio-cero-dm-section__group">
+                            <div class="sitio-cero-dm-section__group-head">
+                                <strong><?php esc_html_e('Acordeones', 'sitio-cero'); ?></strong>
+                            </div>
+                            <div class="sitio-cero-dm-repeater" data-dm-repeater>
+                                <div class="sitio-cero-dm-repeater__list" data-dm-list>
+                                    <?php foreach ($section_accordions as $accordion) : ?>
+                                        <?php
+                                        $accordion_title = isset($accordion['title']) ? (string) $accordion['title'] : '';
+                                        $accordion_content = isset($accordion['content']) ? (string) $accordion['content'] : '';
+                                        ?>
+                                        <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--stack" data-dm-row>
+                                            <p>
+                                                <label><strong><?php esc_html_e('Título del acordeón', 'sitio-cero'); ?></strong></label>
+                                                <input type="text" class="widefat" name="sitio_cero_direccion_section_accordion_title[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_accordion_title[__SECTION__][]" value="<?php echo esc_attr($accordion_title); ?>">
+                                            </p>
+                                            <p>
+                                                <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                                                <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_accordion_content[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_accordion_content[__SECTION__][]"><?php echo esc_textarea($accordion_content); ?></textarea>
+                                            </p>
+                                            <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="button button-secondary" data-dm-add><?php esc_html_e('Agregar acordeón', 'sitio-cero'); ?></button>
+                                <template data-dm-template>
+                                    <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--stack" data-dm-row>
+                                        <p>
+                                            <label><strong><?php esc_html_e('Título del acordeón', 'sitio-cero'); ?></strong></label>
+                                            <input type="text" class="widefat" name="sitio_cero_direccion_section_accordion_title[__SECTION__][]" data-name-template="sitio_cero_direccion_section_accordion_title[__SECTION__][]" value="">
+                                        </p>
+                                        <p>
+                                            <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                                            <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_accordion_content[__SECTION__][]" data-name-template="sitio_cero_direccion_section_accordion_content[__SECTION__][]"></textarea>
+                                        </p>
+                                        <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="sitio-cero-dm-section__group">
+                            <div class="sitio-cero-dm-section__group-head">
+                                <strong><?php esc_html_e('Pestañas', 'sitio-cero'); ?></strong>
+                            </div>
+                            <div class="sitio-cero-dm-repeater" data-dm-repeater>
+                                <div class="sitio-cero-dm-repeater__list" data-dm-list>
+                                    <?php foreach ($section_subtabs as $subtab) : ?>
+                                        <?php
+                                        $subtab_title = isset($subtab['title']) ? (string) $subtab['title'] : '';
+                                        $subtab_content = isset($subtab['content']) ? (string) $subtab['content'] : '';
+                                        ?>
+                                        <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--stack" data-dm-row>
+                                            <p>
+                                                <label><strong><?php esc_html_e('Título de la pestaña', 'sitio-cero'); ?></strong></label>
+                                                <input type="text" class="widefat" name="sitio_cero_direccion_section_subtab_title[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_subtab_title[__SECTION__][]" value="<?php echo esc_attr($subtab_title); ?>">
+                                            </p>
+                                            <p>
+                                                <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                                                <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_subtab_content[<?php echo esc_attr((string) $section_index); ?>][]" data-name-template="sitio_cero_direccion_section_subtab_content[__SECTION__][]"><?php echo esc_textarea($subtab_content); ?></textarea>
+                                            </p>
+                                            <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <button type="button" class="button button-secondary" data-dm-add><?php esc_html_e('Agregar pestaña', 'sitio-cero'); ?></button>
+                                <template data-dm-template>
+                                    <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--stack" data-dm-row>
+                                        <p>
+                                            <label><strong><?php esc_html_e('Título de la pestaña', 'sitio-cero'); ?></strong></label>
+                                            <input type="text" class="widefat" name="sitio_cero_direccion_section_subtab_title[__SECTION__][]" data-name-template="sitio_cero_direccion_section_subtab_title[__SECTION__][]" value="">
+                                        </p>
+                                        <p>
+                                            <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                                            <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_subtab_content[__SECTION__][]" data-name-template="sitio_cero_direccion_section_subtab_content[__SECTION__][]"></textarea>
+                                        </p>
+                                        <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <button type="button" class="button button-primary" data-dm-section-add><?php esc_html_e('Agregar sección', 'sitio-cero'); ?></button>
+
+            <template data-dm-sections-template>
+                <div class="sitio-cero-dm-section" data-dm-section-row data-section-index="__SECTION__">
+                    <div class="sitio-cero-dm-section__head">
+                        <strong data-section-label><?php esc_html_e('Sección', 'sitio-cero'); ?></strong>
+                        <button type="button" class="button-link-delete" data-dm-section-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+
+                    <div class="sitio-cero-dm-grid">
+                        <p>
+                            <label><strong><?php esc_html_e('Título de la sección', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_direccion_section_title[__SECTION__]" data-name-template="sitio_cero_direccion_section_title[__SECTION__]" value="">
+                        </p>
+                        <p>
+                            <label><strong><?php esc_html_e('Anchor (opcional)', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_direccion_section_anchor[__SECTION__]" data-name-template="sitio_cero_direccion_section_anchor[__SECTION__]" value="" placeholder="mi-seccion">
+                        </p>
+                        <p>
+                            <label><strong><?php esc_html_e('Kicker (opcional)', 'sitio-cero'); ?></strong></label>
+                            <input type="text" class="widefat" name="sitio_cero_direccion_section_kicker[__SECTION__]" data-name-template="sitio_cero_direccion_section_kicker[__SECTION__]" value="">
+                        </p>
+                        <p>
+                            <label><strong><?php esc_html_e('Estilo de fondo', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_direccion_section_style[__SECTION__]" data-name-template="sitio_cero_direccion_section_style[__SECTION__]">
+                                <?php foreach ($section_style_options as $style_key => $style_label) : ?>
+                                    <option value="<?php echo esc_attr($style_key); ?>"><?php echo esc_html($style_label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </p>
+                    </div>
+
+                    <p>
+                        <label><strong><?php esc_html_e('Contenido principal (HTML)', 'sitio-cero'); ?></strong></label>
+                        <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_content[__SECTION__]" data-name-template="sitio_cero_direccion_section_content[__SECTION__]"></textarea>
+                    </p>
+
+                    <div class="sitio-cero-dm-section__group">
+                        <div class="sitio-cero-dm-section__group-head">
+                            <strong><?php esc_html_e('Botones', 'sitio-cero'); ?></strong>
+                        </div>
+                        <p>
+                            <label><strong><?php esc_html_e('Estilo de botones', 'sitio-cero'); ?></strong></label>
+                            <select class="widefat" name="sitio_cero_direccion_section_buttons_style[__SECTION__]" data-name-template="sitio_cero_direccion_section_buttons_style[__SECTION__]">
+                                <?php foreach ($section_button_style_options as $style_key => $style_label) : ?>
+                                    <option value="<?php echo esc_attr($style_key); ?>"<?php selected('pill', $style_key); ?>><?php echo esc_html($style_label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </p>
+                        <div class="sitio-cero-dm-repeater" data-dm-repeater>
+                            <div class="sitio-cero-dm-repeater__list" data-dm-list></div>
+                            <button type="button" class="button button-secondary" data-dm-add><?php esc_html_e('Agregar botón', 'sitio-cero'); ?></button>
+                            <template data-dm-template>
+                                <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--actions" data-dm-row>
+                                    <p>
+                                        <label><strong><?php esc_html_e('Texto', 'sitio-cero'); ?></strong></label>
+                                        <input type="text" class="widefat" name="sitio_cero_direccion_section_button_label[__SECTION__][]" data-name-template="sitio_cero_direccion_section_button_label[__SECTION__][]" value="">
+                                    </p>
+                                    <p>
+                                        <label><strong><?php esc_html_e('URL', 'sitio-cero'); ?></strong></label>
+                                        <input type="url" class="widefat" name="sitio_cero_direccion_section_button_url[__SECTION__][]" data-name-template="sitio_cero_direccion_section_button_url[__SECTION__][]" value="">
+                                    </p>
+                                    <p>
+                                        <label><strong><?php esc_html_e('Destino', 'sitio-cero'); ?></strong></label>
+                                        <select class="widefat" name="sitio_cero_direccion_section_button_target[__SECTION__][]" data-name-template="sitio_cero_direccion_section_button_target[__SECTION__][]">
+                                            <option value=""><?php esc_html_e('Misma pestaña', 'sitio-cero'); ?></option>
+                                            <option value="_blank"><?php esc_html_e('Nueva pestaña', 'sitio-cero'); ?></option>
+                                        </select>
+                                    </p>
+                                    <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="sitio-cero-dm-section__group">
+                        <div class="sitio-cero-dm-section__group-head">
+                            <strong><?php esc_html_e('Acordeones', 'sitio-cero'); ?></strong>
+                        </div>
+                        <div class="sitio-cero-dm-repeater" data-dm-repeater>
+                            <div class="sitio-cero-dm-repeater__list" data-dm-list></div>
+                            <button type="button" class="button button-secondary" data-dm-add><?php esc_html_e('Agregar acordeón', 'sitio-cero'); ?></button>
+                            <template data-dm-template>
+                                <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--stack" data-dm-row>
+                                    <p>
+                                        <label><strong><?php esc_html_e('Título del acordeón', 'sitio-cero'); ?></strong></label>
+                                        <input type="text" class="widefat" name="sitio_cero_direccion_section_accordion_title[__SECTION__][]" data-name-template="sitio_cero_direccion_section_accordion_title[__SECTION__][]" value="">
+                                    </p>
+                                    <p>
+                                        <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                                        <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_accordion_content[__SECTION__][]" data-name-template="sitio_cero_direccion_section_accordion_content[__SECTION__][]"></textarea>
+                                    </p>
+                                    <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="sitio-cero-dm-section__group">
+                        <div class="sitio-cero-dm-section__group-head">
+                            <strong><?php esc_html_e('Pestañas', 'sitio-cero'); ?></strong>
+                        </div>
+                        <div class="sitio-cero-dm-repeater" data-dm-repeater>
+                            <div class="sitio-cero-dm-repeater__list" data-dm-list></div>
+                            <button type="button" class="button button-secondary" data-dm-add><?php esc_html_e('Agregar pestaña', 'sitio-cero'); ?></button>
+                            <template data-dm-template>
+                                <div class="sitio-cero-dm-repeater__row sitio-cero-dm-repeater__row--stack" data-dm-row>
+                                    <p>
+                                        <label><strong><?php esc_html_e('Título de la pestaña', 'sitio-cero'); ?></strong></label>
+                                        <input type="text" class="widefat" name="sitio_cero_direccion_section_subtab_title[__SECTION__][]" data-name-template="sitio_cero_direccion_section_subtab_title[__SECTION__][]" value="">
+                                    </p>
+                                    <p>
+                                        <label><strong><?php esc_html_e('Contenido (HTML)', 'sitio-cero'); ?></strong></label>
+                                        <textarea class="widefat" rows="6" name="sitio_cero_direccion_section_subtab_content[__SECTION__][]" data-name-template="sitio_cero_direccion_section_subtab_content[__SECTION__][]"></textarea>
+                                    </p>
+                                    <button type="button" class="button-link-delete" data-dm-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
     </div>
     <?php
 }
@@ -5624,6 +6118,147 @@ function sitio_cero_save_direccion_municipal_meta($post_id)
         update_post_meta($post_id, 'sitio_cero_direccion_custom_css', $custom_css);
     } else {
         delete_post_meta($post_id, 'sitio_cero_direccion_custom_css');
+    }
+
+    $section_titles = isset($_POST['sitio_cero_direccion_section_title']) && is_array($_POST['sitio_cero_direccion_section_title'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_title'])
+        : array();
+    $section_anchors = isset($_POST['sitio_cero_direccion_section_anchor']) && is_array($_POST['sitio_cero_direccion_section_anchor'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_anchor'])
+        : array();
+    $section_kickers = isset($_POST['sitio_cero_direccion_section_kicker']) && is_array($_POST['sitio_cero_direccion_section_kicker'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_kicker'])
+        : array();
+    $section_contents = isset($_POST['sitio_cero_direccion_section_content']) && is_array($_POST['sitio_cero_direccion_section_content'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_content'])
+        : array();
+    $section_styles = isset($_POST['sitio_cero_direccion_section_style']) && is_array($_POST['sitio_cero_direccion_section_style'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_style'])
+        : array();
+    $section_buttons_styles = isset($_POST['sitio_cero_direccion_section_buttons_style']) && is_array($_POST['sitio_cero_direccion_section_buttons_style'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_buttons_style'])
+        : array();
+    $section_button_labels = isset($_POST['sitio_cero_direccion_section_button_label']) && is_array($_POST['sitio_cero_direccion_section_button_label'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_button_label'])
+        : array();
+    $section_button_urls = isset($_POST['sitio_cero_direccion_section_button_url']) && is_array($_POST['sitio_cero_direccion_section_button_url'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_button_url'])
+        : array();
+    $section_button_targets = isset($_POST['sitio_cero_direccion_section_button_target']) && is_array($_POST['sitio_cero_direccion_section_button_target'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_button_target'])
+        : array();
+    $section_accordion_titles = isset($_POST['sitio_cero_direccion_section_accordion_title']) && is_array($_POST['sitio_cero_direccion_section_accordion_title'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_accordion_title'])
+        : array();
+    $section_accordion_contents = isset($_POST['sitio_cero_direccion_section_accordion_content']) && is_array($_POST['sitio_cero_direccion_section_accordion_content'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_accordion_content'])
+        : array();
+    $section_subtab_titles = isset($_POST['sitio_cero_direccion_section_subtab_title']) && is_array($_POST['sitio_cero_direccion_section_subtab_title'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_subtab_title'])
+        : array();
+    $section_subtab_contents = isset($_POST['sitio_cero_direccion_section_subtab_content']) && is_array($_POST['sitio_cero_direccion_section_subtab_content'])
+        ? wp_unslash($_POST['sitio_cero_direccion_section_subtab_content'])
+        : array();
+
+    $section_total = max(
+        count($section_titles),
+        count($section_anchors),
+        count($section_kickers),
+        count($section_contents),
+        count($section_styles),
+        count($section_buttons_styles)
+    );
+    $sections = array();
+    $valid_section_styles = array('paper', 'soft', 'dark');
+    $valid_button_styles = array('pill', 'card', 'card-dark');
+
+    for ($index = 0; $index < $section_total; $index++) {
+        $section_title = isset($section_titles[$index]) ? sanitize_text_field((string) $section_titles[$index]) : '';
+        $section_anchor = isset($section_anchors[$index]) ? sanitize_title(ltrim((string) $section_anchors[$index], '#')) : '';
+        $section_kicker = isset($section_kickers[$index]) ? sanitize_text_field((string) $section_kickers[$index]) : '';
+        $section_content = isset($section_contents[$index]) ? sitio_cero_sanitize_direccion_html((string) $section_contents[$index]) : '';
+
+        $section_style = isset($section_styles[$index]) ? sanitize_key((string) $section_styles[$index]) : '';
+        if (!in_array($section_style, $valid_section_styles, true)) {
+            $section_style = '';
+        }
+
+        $buttons_style = isset($section_buttons_styles[$index]) ? sanitize_key((string) $section_buttons_styles[$index]) : '';
+        if (!in_array($buttons_style, $valid_button_styles, true)) {
+            $buttons_style = '';
+        }
+
+        $button_labels = isset($section_button_labels[$index]) && is_array($section_button_labels[$index]) ? $section_button_labels[$index] : array();
+        $button_urls = isset($section_button_urls[$index]) && is_array($section_button_urls[$index]) ? $section_button_urls[$index] : array();
+        $button_targets = isset($section_button_targets[$index]) && is_array($section_button_targets[$index]) ? $section_button_targets[$index] : array();
+        $buttons = sitio_cero_collect_participacion_link_items($button_labels, $button_urls, $button_targets);
+
+        $accordion_titles = isset($section_accordion_titles[$index]) && is_array($section_accordion_titles[$index]) ? $section_accordion_titles[$index] : array();
+        $accordion_contents = isset($section_accordion_contents[$index]) && is_array($section_accordion_contents[$index]) ? $section_accordion_contents[$index] : array();
+        $accordion_total = max(count($accordion_titles), count($accordion_contents));
+        $accordions = array();
+
+        for ($accordion_index = 0; $accordion_index < $accordion_total; $accordion_index++) {
+            $accordion_title = isset($accordion_titles[$accordion_index]) ? sanitize_text_field((string) $accordion_titles[$accordion_index]) : '';
+            $accordion_content = isset($accordion_contents[$accordion_index]) ? sitio_cero_sanitize_direccion_html((string) $accordion_contents[$accordion_index]) : '';
+
+            if ('' === $accordion_title && '' === trim((string) wp_strip_all_tags($accordion_content))) {
+                continue;
+            }
+
+            $accordions[] = array(
+                'title'   => $accordion_title,
+                'content' => $accordion_content,
+            );
+        }
+
+        $subtab_titles = isset($section_subtab_titles[$index]) && is_array($section_subtab_titles[$index]) ? $section_subtab_titles[$index] : array();
+        $subtab_contents = isset($section_subtab_contents[$index]) && is_array($section_subtab_contents[$index]) ? $section_subtab_contents[$index] : array();
+        $subtab_total = max(count($subtab_titles), count($subtab_contents));
+        $subtabs = array();
+
+        for ($subtab_index = 0; $subtab_index < $subtab_total; $subtab_index++) {
+            $subtab_title = isset($subtab_titles[$subtab_index]) ? sanitize_text_field((string) $subtab_titles[$subtab_index]) : '';
+            $subtab_content = isset($subtab_contents[$subtab_index]) ? sitio_cero_sanitize_direccion_html((string) $subtab_contents[$subtab_index]) : '';
+
+            if ('' === $subtab_title && '' === trim((string) wp_strip_all_tags($subtab_content))) {
+                continue;
+            }
+
+            $subtabs[] = array(
+                'title'   => $subtab_title,
+                'content' => $subtab_content,
+            );
+        }
+
+        if (
+            '' === $section_title
+            && '' === $section_kicker
+            && '' === trim((string) wp_strip_all_tags($section_content))
+            && empty($buttons)
+            && empty($accordions)
+            && empty($subtabs)
+        ) {
+            continue;
+        }
+
+        $sections[] = array(
+            'title'         => $section_title,
+            'anchor'        => $section_anchor,
+            'kicker'        => $section_kicker,
+            'content'       => $section_content,
+            'style'         => $section_style,
+            'buttons_style' => $buttons_style,
+            'buttons'       => $buttons,
+            'accordions'    => $accordions,
+            'subtabs'       => $subtabs,
+        );
+    }
+
+    if (!empty($sections)) {
+        update_post_meta($post_id, 'sitio_cero_direccion_sections', $sections);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_direccion_sections');
     }
 }
 add_action('save_post_direccion_municipal', 'sitio_cero_save_direccion_municipal_meta');

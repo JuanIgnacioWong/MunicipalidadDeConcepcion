@@ -981,12 +981,7 @@
         const setItemState = (button, panel, shouldOpen) => {
             button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
             button.classList.toggle('elementor-active', shouldOpen);
-
-            if (shouldOpen) {
-                panel.style.display = 'block';
-            } else {
-                panel.style.display = 'none';
-            }
+            panel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
         };
 
         const entries = items
@@ -1002,8 +997,7 @@
 
         entries.forEach((entry) => {
             const { button, panel } = entry;
-            const isInitiallyOpen = button.getAttribute('aria-expanded') === 'true' || button.classList.contains('elementor-active');
-            setItemState(button, panel, isInitiallyOpen);
+            setItemState(button, panel, false);
         });
 
         entries.forEach((entry) => {

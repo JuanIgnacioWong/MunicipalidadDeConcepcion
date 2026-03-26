@@ -55,6 +55,9 @@ get_header();
         $resource_blocks = function_exists('sitio_cero_get_direccion_resource_blocks')
             ? sitio_cero_get_direccion_resource_blocks($post_id)
             : array();
+        $sections = function_exists('sitio_cero_get_direccion_sections')
+            ? sitio_cero_get_direccion_sections($post_id)
+            : array();
 
         if (!is_string($recursos_titulo)) {
             $recursos_titulo = '';
@@ -156,6 +159,150 @@ get_header();
             $custom_html_output = do_shortcode(wp_kses($custom_html, $allowed_html));
         }
 
+        $sections_view = array();
+        $used_section_ids = array('descripcion', 'organizacion', 'recursos', 'extra');
+        $valid_section_styles = array('paper', 'soft', 'dark');
+        $valid_button_styles = array('pill', 'card', 'card-dark');
+
+        foreach ($sections as $section_index => $section) {
+            if (!is_array($section)) {
+                continue;
+            }
+
+            $section_title = isset($section['title']) ? sanitize_text_field((string) $section['title']) : '';
+            $section_kicker = isset($section['kicker']) ? sanitize_text_field((string) $section['kicker']) : '';
+            $section_content_raw = isset($section['content']) ? (string) $section['content'] : '';
+            $section_content = '';
+            if ('' !== trim($section_content_raw)) {
+                $section_content = do_shortcode(wp_kses($section_content_raw, $allowed_html));
+            }
+
+            $section_style = isset($section['style']) ? sanitize_key((string) $section['style']) : '';
+            if (!in_array($section_style, $valid_section_styles, true)) {
+                $section_style = '';
+            }
+
+            $section_buttons_style = isset($section['buttons_style']) ? sanitize_key((string) $section['buttons_style']) : '';
+            if (!in_array($section_buttons_style, $valid_button_styles, true)) {
+                $section_buttons_style = 'pill';
+            }
+
+            $section_buttons = array();
+            if (isset($section['buttons']) && is_array($section['buttons'])) {
+                foreach ($section['buttons'] as $button) {
+                    if (!is_array($button)) {
+                        continue;
+                    }
+                    $button_label = isset($button['label']) ? sanitize_text_field((string) $button['label']) : '';
+                    $button_url = isset($button['url']) ? esc_url((string) $button['url']) : '';
+                    $button_target = isset($button['target']) && '_blank' === $button['target'] ? '_blank' : '';
+
+                    if ('' === $button_label || '' === $button_url) {
+                        continue;
+                    }
+
+                    $section_buttons[] = array(
+                        'label'  => $button_label,
+                        'url'    => $button_url,
+                        'target' => $button_target,
+                    );
+                }
+            }
+
+            $section_accordions = array();
+            if (isset($section['accordions']) && is_array($section['accordions'])) {
+                foreach ($section['accordions'] as $accordion) {
+                    if (!is_array($accordion)) {
+                        continue;
+                    }
+                    $accordion_title = isset($accordion['title']) ? sanitize_text_field((string) $accordion['title']) : '';
+                    $accordion_content_raw = isset($accordion['content']) ? (string) $accordion['content'] : '';
+                    $accordion_content = '';
+                    if ('' !== trim($accordion_content_raw)) {
+                        $accordion_content = do_shortcode(wp_kses($accordion_content_raw, $allowed_html));
+                    }
+
+                    if ('' === $accordion_title && '' === trim($accordion_content)) {
+                        continue;
+                    }
+
+                    $section_accordions[] = array(
+                        'title'   => $accordion_title,
+                        'content' => $accordion_content,
+                    );
+                }
+            }
+
+            $section_subtabs = array();
+            if (isset($section['subtabs']) && is_array($section['subtabs'])) {
+                foreach ($section['subtabs'] as $subtab) {
+                    if (!is_array($subtab)) {
+                        continue;
+                    }
+                    $subtab_title = isset($subtab['title']) ? sanitize_text_field((string) $subtab['title']) : '';
+                    $subtab_content_raw = isset($subtab['content']) ? (string) $subtab['content'] : '';
+                    $subtab_content = '';
+                    if ('' !== trim($subtab_content_raw)) {
+                        $subtab_content = do_shortcode(wp_kses($subtab_content_raw, $allowed_html));
+                    }
+
+                    if ('' === $subtab_title && '' === trim($subtab_content)) {
+                        continue;
+                    }
+
+                    $section_subtabs[] = array(
+                        'title'   => $subtab_title,
+                        'content' => $subtab_content,
+                    );
+                }
+            }
+
+            if (
+                '' === $section_title
+                && '' === $section_kicker
+                && '' === trim($section_content)
+                && empty($section_buttons)
+                && empty($section_accordions)
+                && empty($section_subtabs)
+            ) {
+                continue;
+            }
+
+            if ('' === $section_title) {
+                $section_title = sprintf(__('Sección %d', 'sitio-cero'), $section_index + 1);
+            }
+
+            $section_anchor = isset($section['anchor']) ? sanitize_title(ltrim((string) $section['anchor'], '#')) : '';
+            if ('' === $section_anchor) {
+                $section_anchor = sanitize_title($section_title);
+            }
+            if ('' === $section_anchor) {
+                $section_anchor = 'seccion-' . ($section_index + 1);
+            }
+
+            $base_anchor = $section_anchor;
+            $suffix = 2;
+            while (in_array($section_anchor, $used_section_ids, true)) {
+                $section_anchor = $base_anchor . '-' . $suffix;
+                $suffix++;
+            }
+            $used_section_ids[] = $section_anchor;
+
+            $sections_view[] = array(
+                'id'            => $section_anchor,
+                'title'         => $section_title,
+                'kicker'        => $section_kicker,
+                'content'       => $section_content,
+                'style'         => $section_style,
+                'buttons_style' => $section_buttons_style,
+                'buttons'       => $section_buttons,
+                'accordions'    => $section_accordions,
+                'subtabs'       => $section_subtabs,
+            );
+        }
+
+        $has_sections = !empty($sections_view);
+
         $has_content = '' !== trim((string) get_the_content());
         $has_org_data = '' !== trim($director) || '' !== trim($profesion) || !empty($telefonos) || '' !== trim($email) || '' !== trim($direccion);
         $has_map = '' !== $map_src;
@@ -216,6 +363,21 @@ get_header();
                     <?php endif; ?>
                     <?php if ($has_custom) : ?>
                         <a class="pc-subnav__link" href="#extra"><?php esc_html_e('Informacion adicional', 'sitio-cero'); ?></a>
+                    <?php endif; ?>
+                    <?php if ($has_sections) : ?>
+                        <?php foreach ($sections_view as $section_item) : ?>
+                            <?php
+                            if (!is_array($section_item)) {
+                                continue;
+                            }
+                            $section_link = isset($section_item['id']) ? (string) $section_item['id'] : '';
+                            $section_label = isset($section_item['title']) ? (string) $section_item['title'] : '';
+                            if ('' === $section_link || '' === $section_label) {
+                                continue;
+                            }
+                            ?>
+                            <a class="pc-subnav__link" href="#<?php echo esc_attr($section_link); ?>"><?php echo esc_html($section_label); ?></a>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </section>
@@ -375,6 +537,150 @@ get_header();
                         </div>
                     </div>
                 </section>
+            <?php endif; ?>
+
+            <?php if ($has_sections) : ?>
+                <?php foreach ($sections_view as $section_item) : ?>
+                    <?php
+                    if (!is_array($section_item)) {
+                        continue;
+                    }
+
+                    $section_id = isset($section_item['id']) ? (string) $section_item['id'] : '';
+                    $section_title = isset($section_item['title']) ? (string) $section_item['title'] : '';
+                    $section_kicker = isset($section_item['kicker']) ? (string) $section_item['kicker'] : '';
+                    $section_content = isset($section_item['content']) ? (string) $section_item['content'] : '';
+                    $section_style = isset($section_item['style']) ? (string) $section_item['style'] : '';
+                    $section_buttons_style = isset($section_item['buttons_style']) ? (string) $section_item['buttons_style'] : 'pill';
+                    $section_buttons = isset($section_item['buttons']) && is_array($section_item['buttons']) ? $section_item['buttons'] : array();
+                    $section_accordions = isset($section_item['accordions']) && is_array($section_item['accordions']) ? $section_item['accordions'] : array();
+                    $section_subtabs = isset($section_item['subtabs']) && is_array($section_item['subtabs']) ? $section_item['subtabs'] : array();
+
+                    if ('' === $section_id) {
+                        continue;
+                    }
+
+                    $section_class = 'pc-section';
+                    if ('' !== $section_style) {
+                        $section_class .= ' pc-section--' . $section_style;
+                    }
+                    ?>
+                    <section id="<?php echo esc_attr($section_id); ?>" class="<?php echo esc_attr($section_class); ?>">
+                        <div class="pc-section__inner">
+                            <?php if ('' !== $section_kicker || '' !== $section_title) : ?>
+                                <header class="pc-section__header">
+                                    <?php if ('' !== $section_kicker) : ?>
+                                        <p class="pc-kicker"><?php echo esc_html($section_kicker); ?></p>
+                                    <?php endif; ?>
+                                    <?php if ('' !== $section_title) : ?>
+                                        <h2><?php echo esc_html($section_title); ?></h2>
+                                    <?php endif; ?>
+                                </header>
+                            <?php endif; ?>
+
+                            <?php if ('' !== trim($section_content)) : ?>
+                                <div class="pc-flow content-body dm-content">
+                                    <?php echo $section_content; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($section_buttons)) : ?>
+                                <?php
+                                $valid_button_styles = array('pill', 'card', 'card-dark');
+                                if (!in_array($section_buttons_style, $valid_button_styles, true)) {
+                                    $section_buttons_style = 'pill';
+                                }
+
+                                $buttons_wrapper = 'pc-hero__actions dm-section-buttons dm-section-buttons--' . $section_buttons_style;
+                                $button_class = 'pc-card';
+                                if ('card' === $section_buttons_style) {
+                                    $buttons_wrapper = 'pc-grid dm-section-buttons dm-section-buttons--' . $section_buttons_style;
+                                    $button_class = 'pc-pill';
+                                } elseif ('card-dark' === $section_buttons_style) {
+                                    $buttons_wrapper = 'pc-grid dm-section-buttons dm-section-buttons--' . $section_buttons_style;
+                                    $button_class = 'pc-card pc-card--dark';
+                                }
+                                ?>
+                                <div class="<?php echo esc_attr($buttons_wrapper); ?>" aria-label="<?php esc_attr_e('Botones de la sección', 'sitio-cero'); ?>">
+                                    <?php foreach ($section_buttons as $button) : ?>
+                                        <?php
+                                        if (!is_array($button)) {
+                                            continue;
+                                        }
+                                        $button_label = isset($button['label']) ? sanitize_text_field((string) $button['label']) : '';
+                                        $button_url = isset($button['url']) ? esc_url((string) $button['url']) : '';
+                                        $button_target = isset($button['target']) && '_blank' === $button['target'] ? '_blank' : '';
+                                        if ('' === $button_label || '' === $button_url) {
+                                            continue;
+                                        }
+                                        ?>
+                                        <a class="<?php echo esc_attr($button_class); ?>" href="<?php echo esc_url($button_url); ?>"<?php echo '' !== $button_target ? ' target="_blank" rel="noopener"' : ''; ?>><?php echo esc_html($button_label); ?></a>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($section_accordions)) : ?>
+                                <div class="direccion-municipal-accordion-wrap">
+                                    <div class="direccion-municipal-accordion" data-direccion-accordion>
+                                        <?php foreach ($section_accordions as $accordion_index => $accordion) : ?>
+                                            <?php
+                                            if (!is_array($accordion)) {
+                                                continue;
+                                            }
+                                            $accordion_title = isset($accordion['title']) ? sanitize_text_field((string) $accordion['title']) : '';
+                                            $accordion_content = isset($accordion['content']) ? (string) $accordion['content'] : '';
+                                            if ('' === $accordion_title) {
+                                                continue;
+                                            }
+                                            $is_open = 0 === $accordion_index;
+                                            ?>
+                                            <div class="direccion-municipal-accordion__item" data-direccion-accordion-item>
+                                                <button class="direccion-municipal-accordion__toggle" type="button" data-direccion-accordion-toggle aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>">
+                                                    <span><?php echo esc_html($accordion_title); ?></span>
+                                                    <span class="material-symbols-rounded direccion-municipal-accordion__icon" aria-hidden="true">expand_more</span>
+                                                </button>
+                                                <div class="direccion-municipal-accordion__panel pc-flow" data-direccion-accordion-panel<?php echo $is_open ? '' : ' hidden'; ?>>
+                                                    <?php echo $accordion_content; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($section_subtabs)) : ?>
+                                <div class="direccion-municipal-subtabs" data-direccion-subtabs>
+                                    <div class="elementor-accordion">
+                                        <?php foreach ($section_subtabs as $subtab_index => $subtab) : ?>
+                                            <?php
+                                            if (!is_array($subtab)) {
+                                                continue;
+                                            }
+                                            $subtab_title = isset($subtab['title']) ? sanitize_text_field((string) $subtab['title']) : '';
+                                            $subtab_content = isset($subtab['content']) ? (string) $subtab['content'] : '';
+                                            if ('' === $subtab_title) {
+                                                continue;
+                                            }
+                                            ?>
+                                            <div class="elementor-accordion-item" data-direccion-subtab-item>
+                                                <div class="elementor-tab-title" data-direccion-subtab-toggle role="button" tabindex="0" aria-expanded="false">
+                                                    <span class="elementor-accordion-title"><?php echo esc_html($subtab_title); ?></span>
+                                                    <span class="elementor-accordion-icon elementor-accordion-icon-right" aria-hidden="true">
+                                                        <span class="elementor-accordion-icon-closed">+</span>
+                                                        <span class="elementor-accordion-icon-opened">-</span>
+                                                    </span>
+                                                </div>
+                                                <div class="elementor-tab-content" data-direccion-subtab-panel>
+                                                    <?php echo $subtab_content; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
             <?php endif; ?>
         </article>
     <?php endwhile; else : ?>

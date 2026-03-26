@@ -2510,7 +2510,7 @@ img {
 }
 
 .direccion-municipal-subtabs .elementor-accordion-item {
-    border: 0;
+    border: 1px solid #dce4f2;
     border-radius: 0;
     padding: 0;
 }
@@ -2585,11 +2585,21 @@ img {
 
 .direccion-municipal-subtabs .elementor-tab-content {
     border-top: 1px solid #e4eaf2;
-    display: none;
-    padding: 14px 16px 16px;
+    display: block;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0 16px;
     background: #fafcff;
     color: #1d314f;
     border-radius: 0;
+    transition: max-height 0.35s ease, opacity 0.35s ease, padding 0.35s ease;
+}
+
+.direccion-municipal-subtabs .elementor-tab-title.elementor-active + .elementor-tab-content {
+    max-height: 1200px;
+    opacity: 1;
+    padding: 14px 16px 16px;
 }
 
 .direccion-municipal-subtabs .elementor-accordion-title {
@@ -4077,6 +4087,21 @@ body.has-news-gallery-lightbox {
     transform: translateY(-2px);
 }
 
+.dm-section-buttons--card .pc-pill,
+.dm-section-buttons--card .pc-pill .wp-block-button__link {
+    background: #2f4f78;
+    color: #ffffff;
+}
+
+.dm-section-buttons--card .pc-pill:hover,
+.dm-section-buttons--card .pc-pill:focus-visible,
+.dm-section-buttons--card .pc-pill:focus-within,
+.dm-section-buttons--card .pc-pill:hover .wp-block-button__link,
+.dm-section-buttons--card .pc-pill:focus-visible .wp-block-button__link,
+.dm-section-buttons--card .pc-pill:focus-within .wp-block-button__link {
+    background: #3a5d8b;
+}
+
 .pc-section {
     padding: clamp(2.5rem, 5vw, 4.5rem) clamp(1.4rem, 4.5vw, 4.5rem);
 }
@@ -4260,6 +4285,21 @@ body.has-news-gallery-lightbox {
 .pc-card--dark:focus-visible .wp-block-button__link,
 .pc-card--dark:focus-within .wp-block-button__link {
     box-shadow: 0 28px 54px rgba(2, 10, 24, 0.45);
+}
+
+.dm-section-buttons--card-dark .pc-card--dark,
+.dm-section-buttons--card-dark .pc-card--dark .wp-block-button__link {
+    background: #0f2343;
+    color: #ffffff;
+}
+
+.dm-section-buttons--card-dark .pc-card--dark:hover,
+.dm-section-buttons--card-dark .pc-card--dark:focus-visible,
+.dm-section-buttons--card-dark .pc-card--dark:focus-within,
+.dm-section-buttons--card-dark .pc-card--dark:hover .wp-block-button__link,
+.dm-section-buttons--card-dark .pc-card--dark:focus-visible .wp-block-button__link,
+.dm-section-buttons--card-dark .pc-card--dark:focus-within .wp-block-button__link {
+    background: #142d55;
 }
 
 .pc-accordion {
