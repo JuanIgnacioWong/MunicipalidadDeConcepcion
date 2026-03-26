@@ -4,6 +4,68 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Orden alfabetico de menús CPT en admin (solo edit.php?post_type=...).
+add_action('admin_menu', function () {
+    global $menu, $submenu;
+
+    if (empty($menu) || !is_array($menu)) {
+        return;
+    }
+
+    $is_cpt_menu = function ($item) {
+        if (!is_array($item) || empty($item[2])) {
+            return false;
+        }
+        return (strpos($item[2], 'edit.php?post_type=') === 0);
+    };
+
+    $get_title = function ($item) {
+        return isset($item[0]) ? wp_strip_all_tags($item[0]) : '';
+    };
+
+    // 1) Ordenar items de menú de CPT.
+    $cpt_items = [];
+    $cpt_indexes = [];
+
+    foreach ($menu as $idx => $item) {
+        if ($is_cpt_menu($item)) {
+            $cpt_items[] = $item;
+            $cpt_indexes[] = $idx;
+        }
+    }
+
+    if (count($cpt_items) > 1) {
+        usort($cpt_items, function ($a, $b) use ($get_title) {
+            return strcasecmp($get_title($a), $get_title($b));
+        });
+
+        // Reinsertar en las mismas posiciones que ocupaban los CPTs.
+        foreach ($cpt_indexes as $i => $idx) {
+            $menu[$idx] = $cpt_items[$i];
+        }
+    }
+
+    // 2) Ordenar submenús de cada CPT.
+    if (!empty($submenu) && is_array($submenu)) {
+        foreach ($submenu as $parent_slug => $items) {
+            if (strpos($parent_slug, 'edit.php?post_type=') !== 0) {
+                continue;
+            }
+
+            if (!is_array($items) || count($items) <= 1) {
+                continue;
+            }
+
+            $sorted = $items;
+            usort($sorted, function ($a, $b) use ($get_title) {
+                return strcasecmp($get_title($a), $get_title($b));
+            });
+
+            $submenu[$parent_slug] = $sorted;
+        }
+    }
+}, 999);
+
 function sitio_cero_setup()
 {
     add_theme_support('title-tag');
@@ -8207,168 +8269,6 @@ function sitio_cero_seed_default_aviso_grilla()
 }
 add_action('init', 'sitio_cero_seed_default_aviso_grilla', 35);
 
-function sitio_cero_register_tramite_post_type()
-{
-    $labels = array(
-        'name'               => __('Tramites y Servicios', 'sitio-cero'),
-        'singular_name'      => __('Tramite o Servicio', 'sitio-cero'),
-        'menu_name'          => __('Tramites', 'sitio-cero'),
-        'name_admin_bar'     => __('Tramite', 'sitio-cero'),
-        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
-        'add_new_item'       => __('Agregar tramite o servicio', 'sitio-cero'),
-        'new_item'           => __('Nuevo tramite o servicio', 'sitio-cero'),
-        'edit_item'          => __('Editar tramite o servicio', 'sitio-cero'),
-        'view_item'          => __('Ver tramite o servicio', 'sitio-cero'),
-        'all_items'          => __('Todos los tramites', 'sitio-cero'),
-        'search_items'       => __('Buscar tramites', 'sitio-cero'),
-        'not_found'          => __('No se encontraron tramites.', 'sitio-cero'),
-        'not_found_in_trash' => __('No hay tramites en la papelera.', 'sitio-cero'),
-    );
-
-    register_post_type(
-        'tramite_servicio',
-        array(
-            'labels'             => $labels,
-            'public'             => false,
-            'show_ui'            => true,
-            'show_in_menu'       => true,
-            'show_in_nav_menus'  => false,
-            'show_in_admin_bar'  => true,
-            'show_in_rest'       => true,
-            'publicly_queryable' => false,
-            'exclude_from_search'=> true,
-            'has_archive'        => false,
-            'rewrite'            => false,
-            'menu_position'      => 23,
-            'menu_icon'          => 'dashicons-welcome-write-blog',
-            'supports'           => array('title', 'editor', 'thumbnail', 'page-attributes'),
-        )
-    );
-}
-add_action('init', 'sitio_cero_register_tramite_post_type');
-
-function sitio_cero_add_tramite_metaboxes()
-{
-    add_meta_box(
-        'sitio_cero_tramite_options',
-        __('Opciones del tramite', 'sitio-cero'),
-        'sitio_cero_render_tramite_metabox',
-        'tramite_servicio',
-        'normal',
-        'high'
-    );
-}
-add_action('add_meta_boxes', 'sitio_cero_add_tramite_metaboxes');
-
-function sitio_cero_enqueue_tramite_admin_assets($hook_suffix)
-{
-    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
-        return;
-    }
-
-    $screen = get_current_screen();
-    if (!$screen || 'tramite_servicio' !== $screen->post_type) {
-        return;
-    }
-
-    wp_enqueue_style('wp-color-picker');
-    wp_enqueue_script('wp-color-picker');
-
-    wp_add_inline_script(
-        'wp-color-picker',
-        "jQuery(function($){ $('.sitio-cero-color-picker').wpColorPicker(); });"
-    );
-}
-add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_tramite_admin_assets');
-
-function sitio_cero_render_tramite_metabox($post)
-{
-    wp_nonce_field('sitio_cero_save_tramite_meta', 'sitio_cero_tramite_meta_nonce');
-
-    $url = get_post_meta($post->ID, 'sitio_cero_tramite_url', true);
-    $bg_color = get_post_meta($post->ID, 'sitio_cero_tramite_bg_color', true);
-    $custom_html = get_post_meta($post->ID, 'sitio_cero_tramite_custom_html', true);
-    $custom_css = get_post_meta($post->ID, 'sitio_cero_tramite_custom_css', true);
-
-    if (!is_string($url)) {
-        $url = '';
-    }
-
-    if (!is_string($bg_color)) {
-        $bg_color = '';
-    }
-
-    $bg_color = sanitize_hex_color($bg_color);
-    if (!is_string($bg_color)) {
-        $bg_color = '';
-    }
-
-    if (!is_string($custom_html)) {
-        $custom_html = '';
-    }
-
-    if (!is_string($custom_css)) {
-        $custom_css = '';
-    }
-    ?>
-    <p>
-        <label for="sitio_cero_tramite_url"><strong><?php esc_html_e('URL del servicio', 'sitio-cero'); ?></strong></label><br>
-        <input
-            id="sitio_cero_tramite_url"
-            name="sitio_cero_tramite_url"
-            type="url"
-            class="widefat"
-            value="<?php echo esc_attr($url); ?>"
-            placeholder="https://..."
-        >
-    </p>
-    <p>
-        <label for="sitio_cero_tramite_bg_color"><strong><?php esc_html_e('Color de caja (pastel)', 'sitio-cero'); ?></strong></label><br>
-        <input
-            id="sitio_cero_tramite_bg_color"
-            name="sitio_cero_tramite_bg_color"
-            type="text"
-            class="sitio-cero-color-picker"
-            value="<?php echo esc_attr($bg_color); ?>"
-            data-default-color="#82b1ff"
-        >
-        <small><?php esc_html_e('Selecciona un color para el fondo de esta tarjeta.', 'sitio-cero'); ?></small>
-        <br>
-        <small><?php esc_html_e('Sugeridos Material (llamativos):', 'sitio-cero'); ?> <code>#82b1ff</code> <code>#b9f6ca</code> <code>#ffd180</code> <code>#b388ff</code></small>
-    </p>
-    <p>
-        <label for="sitio_cero_tramite_custom_html"><strong><?php esc_html_e('HTML personalizado del servicio (opcional)', 'sitio-cero'); ?></strong></label><br>
-        <textarea
-            id="sitio_cero_tramite_custom_html"
-            name="sitio_cero_tramite_custom_html"
-            class="widefat"
-            rows="7"
-            placeholder="<?php esc_attr_e('Ejemplo: <h3>Permisos</h3><p>Texto</p><ul><li>Item</li></ul>', 'sitio-cero'); ?>"
-        ><?php echo esc_textarea($custom_html); ?></textarea>
-        <small><?php esc_html_e('Si completas este campo, se mostrara en lugar del contenido principal del tramite.', 'sitio-cero'); ?></small>
-    </p>
-    <p>
-        <label for="sitio_cero_tramite_custom_css"><strong><?php esc_html_e('CSS propio de la tarjeta', 'sitio-cero'); ?></strong></label><br>
-        <textarea
-            id="sitio_cero_tramite_custom_css"
-            name="sitio_cero_tramite_custom_css"
-            class="widefat"
-            rows="6"
-            placeholder="<?php esc_attr_e('Escribe declaraciones CSS o una regla completa. Usa {{selector}} para apuntar esta tarjeta.', 'sitio-cero'); ?>"
-        ><?php echo esc_textarea($custom_css); ?></textarea>
-        <small><?php esc_html_e('Ejemplo declaraciones: background:#f6f0ff; border-color:#cdb5f7;', 'sitio-cero'); ?></small><br>
-        <small><?php esc_html_e('Ejemplo regla completa: {{selector}} .service-card__body h3 { color:#234; }', 'sitio-cero'); ?></small>
-    </p>
-    <p>
-        <button type="submit" class="button button-secondary" name="sitio_cero_tramite_restore_example" value="1">
-            <?php esc_html_e('Restaurar ejemplo en este tramite', 'sitio-cero'); ?>
-        </button>
-        <br>
-        <small><?php esc_html_e('Al guardar con este boton se reemplazan color, HTML y CSS por un ejemplo de referencia.', 'sitio-cero'); ?></small>
-    </p>
-    <?php
-}
-
 function sitio_cero_sanitize_tramite_custom_css($css)
 {
     $css = wp_kses((string) $css, array());
@@ -8376,333 +8276,6 @@ function sitio_cero_sanitize_tramite_custom_css($css)
 
     return trim((string) $css);
 }
-
-function sitio_cero_save_tramite_meta($post_id)
-{
-    if (!isset($_POST['sitio_cero_tramite_meta_nonce'])) {
-        return;
-    }
-
-    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_tramite_meta_nonce']));
-    if (!wp_verify_nonce($nonce, 'sitio_cero_save_tramite_meta')) {
-        return;
-    }
-
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-        return;
-    }
-
-    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
-        return;
-    }
-
-    if (!current_user_can('edit_post', $post_id)) {
-        return;
-    }
-
-    $url = '';
-    if (isset($_POST['sitio_cero_tramite_url'])) {
-        $url = esc_url_raw(wp_unslash($_POST['sitio_cero_tramite_url']));
-    }
-
-    if ('' !== $url) {
-        update_post_meta($post_id, 'sitio_cero_tramite_url', $url);
-    } else {
-        delete_post_meta($post_id, 'sitio_cero_tramite_url');
-    }
-
-    $bg_color = '';
-    if (isset($_POST['sitio_cero_tramite_bg_color'])) {
-        $bg_color = sanitize_hex_color(wp_unslash($_POST['sitio_cero_tramite_bg_color']));
-    }
-
-    if (is_string($bg_color) && '' !== $bg_color) {
-        update_post_meta($post_id, 'sitio_cero_tramite_bg_color', $bg_color);
-    } else {
-        delete_post_meta($post_id, 'sitio_cero_tramite_bg_color');
-    }
-
-    $custom_html = '';
-    if (isset($_POST['sitio_cero_tramite_custom_html'])) {
-        $custom_html = wp_unslash($_POST['sitio_cero_tramite_custom_html']);
-        if (current_user_can('unfiltered_html')) {
-            $custom_html = preg_replace('/<\/?script[^>]*>/i', '', (string) $custom_html);
-            $custom_html = preg_replace('/\s+on[a-z]+\s*=\s*([\'"]).*?\1/i', '', (string) $custom_html);
-        } else {
-            $custom_html = wp_kses_post($custom_html);
-        }
-        $custom_html = trim((string) $custom_html);
-    }
-
-    if ('' !== $custom_html) {
-        update_post_meta($post_id, 'sitio_cero_tramite_custom_html', $custom_html);
-    } else {
-        delete_post_meta($post_id, 'sitio_cero_tramite_custom_html');
-    }
-
-    $custom_css = '';
-    if (isset($_POST['sitio_cero_tramite_custom_css'])) {
-        $custom_css = wp_unslash($_POST['sitio_cero_tramite_custom_css']);
-        if (!current_user_can('unfiltered_html')) {
-            $custom_css = sanitize_textarea_field($custom_css);
-        }
-        $custom_css = sitio_cero_sanitize_tramite_custom_css($custom_css);
-    }
-
-    if ('' !== $custom_css) {
-        update_post_meta($post_id, 'sitio_cero_tramite_custom_css', $custom_css);
-    } else {
-        delete_post_meta($post_id, 'sitio_cero_tramite_custom_css');
-    }
-
-    if (isset($_POST['sitio_cero_tramite_restore_example'])) {
-        $example = sitio_cero_get_tramite_reference_example_for_post($post_id);
-        if (is_array($example) && !empty($example)) {
-            if (isset($example['bg_color']) && is_string($example['bg_color'])) {
-                update_post_meta($post_id, 'sitio_cero_tramite_bg_color', $example['bg_color']);
-            }
-            if (isset($example['custom_html']) && is_string($example['custom_html'])) {
-                update_post_meta($post_id, 'sitio_cero_tramite_custom_html', $example['custom_html']);
-            }
-            if (isset($example['custom_css']) && is_string($example['custom_css'])) {
-                update_post_meta($post_id, 'sitio_cero_tramite_custom_css', $example['custom_css']);
-            }
-        }
-    }
-}
-add_action('save_post_tramite_servicio', 'sitio_cero_save_tramite_meta');
-
-function sitio_cero_seed_default_tramites()
-{
-    if (!post_type_exists('tramite_servicio')) {
-        return;
-    }
-
-    $already_seeded = get_option('sitio_cero_default_tramites_seeded', '0');
-    if ('1' === (string) $already_seeded) {
-        return;
-    }
-
-    $existing_items = get_posts(
-        array(
-            'post_type'      => 'tramite_servicio',
-            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-            'posts_per_page' => 1,
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-        )
-    );
-
-    if (!empty($existing_items)) {
-        update_option('sitio_cero_default_tramites_seeded', '1');
-        return;
-    }
-
-    $defaults = sitio_cero_get_tramite_reference_examples();
-
-    foreach ($defaults as $index => $item) {
-        $post_id = wp_insert_post(
-            array(
-                'post_type'    => 'tramite_servicio',
-                'post_status'  => 'publish',
-                'post_title'   => $item['title'],
-                'post_content' => $item['content'],
-                'menu_order'   => $index + 1,
-            ),
-            true
-        );
-
-        if (is_wp_error($post_id) || !$post_id) {
-            continue;
-        }
-
-        update_post_meta($post_id, 'sitio_cero_tramite_url', $item['url']);
-        update_post_meta($post_id, 'sitio_cero_tramite_bg_color', $item['bg_color']);
-        update_post_meta($post_id, 'sitio_cero_tramite_custom_html', $item['custom_html']);
-        update_post_meta($post_id, 'sitio_cero_tramite_custom_css', $item['custom_css']);
-    }
-
-    update_option('sitio_cero_default_tramites_seeded', '1');
-}
-add_action('init', 'sitio_cero_seed_default_tramites', 31);
-
-function sitio_cero_get_tramite_reference_examples()
-{
-    return array(
-        array(
-            'title'   => __('Permiso de circulacion', 'sitio-cero'),
-            'content' => __('Consulta deuda, carga tus datos y paga en linea desde el portal comunal.', 'sitio-cero'),
-            'url'     => '#',
-            'bg_color' => '#82b1ff',
-            'custom_html' => '<h3>Permiso de circulacion 2026</h3><p>Paga en linea y descarga tu comprobante al instante.</p><ul><li>Consulta deuda por patente</li><li>Paga con tarjeta o transferencia</li><li>Descarga PDF de respaldo</li></ul><p><strong>Referencia:</strong> este bloque se edita desde HTML personalizado.</p>',
-            'custom_css' => '{{selector}} .service-card__body h3{font-size:1.2rem;} {{selector}} .service-card__body ul{margin:0.55rem 0 0;padding-left:1.1rem;}',
-        ),
-        array(
-            'title'   => __('Patente comercial', 'sitio-cero'),
-            'content' => __('Solicita, renueva o revisa el estado de tu patente comercial vigente.', 'sitio-cero'),
-            'url'     => '#',
-            'bg_color' => '#b9f6ca',
-            'custom_html' => '<h3>Patente comercial</h3><p>Gestiona apertura, renovacion y seguimiento del tramite.</p><p><a href="#">Ver requisitos base</a></p><p><small>Referencia: enlace, textos y estructura HTML personalizable.</small></p>',
-            'custom_css' => '{{selector}} .service-card__body a{display:inline-block;margin-top:0.15rem;text-decoration:none;padding:0.35rem 0.6rem;border-radius:999px;background:rgba(15,35,67,0.08);} {{selector}} .service-card__body small{opacity:.9;}',
-        ),
-        array(
-            'title'   => __('Multas de transito', 'sitio-cero'),
-            'content' => __('Revisa infracciones asociadas y paga en linea con actualizacion inmediata.', 'sitio-cero'),
-            'url'     => '#',
-            'bg_color' => '#ffd180',
-            'custom_html' => '<h3>Multas de transito</h3><p>Consulta por RUT o patente y regulariza en linea.</p><div class="tramite-mini-tag">Atencion 24/7</div><p>Referencia: puedes usar clases propias dentro del HTML.</p>',
-            'custom_css' => '{{selector}} .tramite-mini-tag{display:inline-block;margin:0.4rem 0 0.55rem;padding:0.28rem 0.55rem;border-radius:8px;background:#ffe0c2;color:#74431a;font-weight:700;font-size:.8rem;}',
-        ),
-        array(
-            'title'   => __('Subsidios y beneficios', 'sitio-cero'),
-            'content' => __('Conoce programas abiertos y descarga requisitos para cada convocatoria.', 'sitio-cero'),
-            'url'     => '#',
-            'bg_color' => '#b388ff',
-            'custom_html' => '<h3>Subsidios y beneficios</h3><p>Postula a programas municipales con formulario guiado.</p><ol><li>Revisa fechas</li><li>Adjunta antecedentes</li><li>Recibe estado por correo</li></ol>',
-            'custom_css' => '{{selector}} .service-card__body ol{margin:0.55rem 0 0;padding-left:1.15rem;} {{selector}} .service-card__body li{margin-bottom:0.2rem;}',
-        ),
-    );
-}
-
-function sitio_cero_get_tramite_reference_example_for_post($post_id)
-{
-    $post_id = (int) $post_id;
-    if ($post_id <= 0) {
-        return array();
-    }
-
-    $examples = sitio_cero_get_tramite_reference_examples();
-    if (empty($examples)) {
-        return array();
-    }
-
-    $ids = get_posts(
-        array(
-            'post_type'      => 'tramite_servicio',
-            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-            'posts_per_page' => -1,
-            'orderby'        => array(
-                'menu_order' => 'ASC',
-                'date'       => 'ASC',
-            ),
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-        )
-    );
-
-    $position = array_search($post_id, $ids, true);
-    if (false === $position) {
-        $position = 0;
-    }
-
-    $index = (int) $position % count($examples);
-    return $examples[$index];
-}
-
-function sitio_cero_seed_tramite_reference_content()
-{
-    if (!post_type_exists('tramite_servicio')) {
-        return;
-    }
-
-    $already_seeded = get_option('sitio_cero_tramite_reference_seeded', '0');
-    if ('1' === (string) $already_seeded) {
-        return;
-    }
-
-    $tramites = get_posts(
-        array(
-            'post_type'      => 'tramite_servicio',
-            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-            'posts_per_page' => -1,
-            'orderby'        => array(
-                'menu_order' => 'ASC',
-                'date'       => 'ASC',
-            ),
-            'no_found_rows'  => true,
-        )
-    );
-
-    if (empty($tramites)) {
-        update_option('sitio_cero_tramite_reference_seeded', '1');
-        return;
-    }
-
-    $examples = sitio_cero_get_tramite_reference_examples();
-    $total_examples = count($examples);
-
-    foreach ($tramites as $index => $tramite) {
-        $example = $examples[$index % $total_examples];
-        $post_id = $tramite->ID;
-
-        $current_custom_html = get_post_meta($post_id, 'sitio_cero_tramite_custom_html', true);
-        $current_custom_css = get_post_meta($post_id, 'sitio_cero_tramite_custom_css', true);
-        $current_bg_color = get_post_meta($post_id, 'sitio_cero_tramite_bg_color', true);
-
-        if (!is_string($current_custom_html) || '' === trim($current_custom_html)) {
-            update_post_meta($post_id, 'sitio_cero_tramite_custom_html', $example['custom_html']);
-        }
-
-        if (!is_string($current_custom_css) || '' === trim($current_custom_css)) {
-            update_post_meta($post_id, 'sitio_cero_tramite_custom_css', $example['custom_css']);
-        }
-
-        if (!is_string($current_bg_color) || '' === trim($current_bg_color)) {
-            update_post_meta($post_id, 'sitio_cero_tramite_bg_color', $example['bg_color']);
-        }
-    }
-
-    update_option('sitio_cero_tramite_reference_seeded', '1');
-}
-add_action('init', 'sitio_cero_seed_tramite_reference_content', 32);
-
-function sitio_cero_replace_tramite_colors_with_material_palette()
-{
-    if (!post_type_exists('tramite_servicio')) {
-        return;
-    }
-
-    $already_applied = get_option('sitio_cero_tramite_material_palette_applied', '0');
-    if ('1' === (string) $already_applied) {
-        return;
-    }
-
-    $tramites = get_posts(
-        array(
-            'post_type'      => 'tramite_servicio',
-            'post_status'    => array('publish', 'draft', 'pending', 'future', 'private'),
-            'posts_per_page' => -1,
-            'orderby'        => array(
-                'menu_order' => 'ASC',
-                'date'       => 'ASC',
-            ),
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-        )
-    );
-
-    if (empty($tramites)) {
-        update_option('sitio_cero_tramite_material_palette_applied', '1');
-        return;
-    }
-
-    $examples = sitio_cero_get_tramite_reference_examples();
-    $total_examples = count($examples);
-    if (0 === $total_examples) {
-        update_option('sitio_cero_tramite_material_palette_applied', '1');
-        return;
-    }
-
-    foreach ($tramites as $index => $post_id) {
-        $example = $examples[$index % $total_examples];
-        if (isset($example['bg_color']) && is_string($example['bg_color']) && '' !== $example['bg_color']) {
-            update_post_meta((int) $post_id, 'sitio_cero_tramite_bg_color', $example['bg_color']);
-        }
-    }
-
-    update_option('sitio_cero_tramite_material_palette_applied', '1');
-}
-add_action('init', 'sitio_cero_replace_tramite_colors_with_material_palette', 33);
 
 function sitio_cero_get_hero_info_default_items()
 {
@@ -9114,12 +8687,313 @@ function sitio_cero_save_menu_item_icon_field($menu_id, $menu_item_db_id)
 }
 add_action('wp_update_nav_menu_item', 'sitio_cero_save_menu_item_icon_field', 10, 2);
 
+function sitio_cero_register_concurso_publico_post_type()
+{
+    $labels = array(
+        'name'               => __('Concursos Públicos', 'sitio-cero'),
+        'singular_name'      => __('Concurso Público', 'sitio-cero'),
+        'menu_name'          => __('Concursos Públicos', 'sitio-cero'),
+        'name_admin_bar'     => __('Concurso Público', 'sitio-cero'),
+        'add_new'            => __('Agregar nuevo', 'sitio-cero'),
+        'add_new_item'       => __('Agregar concurso público', 'sitio-cero'),
+        'new_item'           => __('Nuevo concurso público', 'sitio-cero'),
+        'edit_item'          => __('Editar concurso público', 'sitio-cero'),
+        'view_item'          => __('Ver concurso público', 'sitio-cero'),
+        'all_items'          => __('Todos los concursos públicos', 'sitio-cero'),
+        'search_items'       => __('Buscar concursos públicos', 'sitio-cero'),
+        'not_found'          => __('No se encontraron concursos públicos.', 'sitio-cero'),
+        'not_found_in_trash' => __('No hay concursos públicos en la papelera.', 'sitio-cero'),
+    );
+
+    register_post_type(
+        'concurso_publico',
+        array(
+            'labels'             => $labels,
+            'public'             => true,
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'show_in_nav_menus'  => true,
+            'show_in_admin_bar'  => true,
+            'show_in_rest'       => true,
+            'publicly_queryable' => true,
+            'exclude_from_search'=> false,
+            'has_archive'        => true,
+            'rewrite'            => array('slug' => 'concursos-publicos'),
+            'menu_position'      => 24,
+            'menu_icon'          => 'dashicons-awards',
+            'supports'           => array('title', 'editor', 'thumbnail', 'page-attributes'),
+        )
+    );
+}
+add_action('init', 'sitio_cero_register_concurso_publico_post_type');
+
+function sitio_cero_add_concurso_publico_metaboxes()
+{
+    add_meta_box(
+        'sitio_cero_concurso_publico',
+        __('Datos del concurso', 'sitio-cero'),
+        'sitio_cero_render_concurso_publico_metabox',
+        'concurso_publico',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'sitio_cero_add_concurso_publico_metaboxes');
+
+function sitio_cero_enqueue_concurso_publico_admin_assets($hook_suffix)
+{
+    if ('post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix) {
+        return;
+    }
+
+    $screen = get_current_screen();
+    if (!$screen || 'concurso_publico' !== $screen->post_type) {
+        return;
+    }
+
+    wp_enqueue_media();
+    wp_enqueue_script(
+        'sitio-cero-admin-concursos-publicos',
+        get_template_directory_uri() . '/assets/js/admin-concursos-publicos.js',
+        array('jquery'),
+        wp_get_theme()->get('Version'),
+        true
+    );
+}
+add_action('admin_enqueue_scripts', 'sitio_cero_enqueue_concurso_publico_admin_assets');
+
+function sitio_cero_get_concurso_publico_estado($post_id)
+{
+    $estado = get_post_meta($post_id, 'sitio_cero_concurso_estado', true);
+    if (!is_string($estado) || '' === $estado) {
+        $estado = 'activo';
+    }
+    if ('activo' !== $estado && 'inactivo' !== $estado) {
+        $estado = 'activo';
+    }
+    return $estado;
+}
+
+function sitio_cero_get_concurso_publico_documentos($post_id)
+{
+    $docs = get_post_meta($post_id, 'sitio_cero_concurso_documentos', true);
+    if (!is_array($docs)) {
+        return array();
+    }
+    return $docs;
+}
+
+function sitio_cero_render_concurso_publico_metabox($post)
+{
+    wp_nonce_field('sitio_cero_save_concurso_publico_meta', 'sitio_cero_concurso_publico_meta_nonce');
+
+    $estado = sitio_cero_get_concurso_publico_estado($post->ID);
+    $docs = sitio_cero_get_concurso_publico_documentos($post->ID);
+    ?>
+    <p>
+        <label for="sitio_cero_concurso_estado"><strong><?php esc_html_e('Estado del concurso', 'sitio-cero'); ?></strong></label><br>
+        <select id="sitio_cero_concurso_estado" name="sitio_cero_concurso_estado">
+            <option value="activo" <?php selected($estado, 'activo'); ?>><?php esc_html_e('Activo', 'sitio-cero'); ?></option>
+            <option value="inactivo" <?php selected($estado, 'inactivo'); ?>><?php esc_html_e('Inactivo', 'sitio-cero'); ?></option>
+        </select>
+    </p>
+
+    <div class="sitio-cero-docs" data-docs>
+        <p><strong><?php esc_html_e('Documentos adjuntos', 'sitio-cero'); ?></strong></p>
+        <div class="sitio-cero-docs__list">
+            <?php foreach ($docs as $index => $doc) :
+                $doc_id = isset($doc['id']) ? absint($doc['id']) : 0;
+                $doc_label = isset($doc['label']) ? (string) $doc['label'] : '';
+                $file_name = $doc_id ? basename((string) get_attached_file($doc_id)) : '';
+                ?>
+                <div class="sitio-cero-docs__item" data-doc-item>
+                    <input type="hidden" name="sitio_cero_concurso_documentos[<?php echo esc_attr($index); ?>][id]" value="<?php echo esc_attr($doc_id); ?>" data-doc-id>
+                    <input type="text" class="widefat" name="sitio_cero_concurso_documentos[<?php echo esc_attr($index); ?>][label]" value="<?php echo esc_attr($doc_label); ?>" placeholder="<?php esc_attr_e('Etiqueta del documento (opcional)', 'sitio-cero'); ?>" data-doc-label>
+                    <div class="sitio-cero-docs__actions">
+                        <button type="button" class="button sitio-cero-docs__select" data-doc-select><?php esc_html_e('Seleccionar archivo', 'sitio-cero'); ?></button>
+                        <button type="button" class="button-link-delete sitio-cero-docs__remove" data-doc-remove><?php esc_html_e('Quitar', 'sitio-cero'); ?></button>
+                    </div>
+                    <p class="description sitio-cero-docs__filename" data-doc-filename><?php echo esc_html($file_name); ?></p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <p>
+            <button type="button" class="button" data-doc-add><?php esc_html_e('Agregar documento', 'sitio-cero'); ?></button>
+        </p>
+    </div>
+    <?php
+}
+
+function sitio_cero_save_concurso_publico_meta($post_id)
+{
+    if (!isset($_POST['sitio_cero_concurso_publico_meta_nonce'])) {
+        return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['sitio_cero_concurso_publico_meta_nonce']));
+    if (!wp_verify_nonce($nonce, 'sitio_cero_save_concurso_publico_meta')) {
+        return;
+    }
+
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+
+    if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+        return;
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    $estado = 'activo';
+    if (isset($_POST['sitio_cero_concurso_estado'])) {
+        $estado_input = sanitize_text_field(wp_unslash($_POST['sitio_cero_concurso_estado']));
+        if ('inactivo' === $estado_input) {
+            $estado = 'inactivo';
+        }
+    }
+    update_post_meta($post_id, 'sitio_cero_concurso_estado', $estado);
+
+    $docs_input = array();
+    if (isset($_POST['sitio_cero_concurso_documentos']) && is_array($_POST['sitio_cero_concurso_documentos'])) {
+        $docs_input = $_POST['sitio_cero_concurso_documentos'];
+    }
+
+    $docs = array();
+    foreach ($docs_input as $doc) {
+        if (!is_array($doc)) {
+            continue;
+        }
+        $doc_id = isset($doc['id']) ? absint($doc['id']) : 0;
+        if ($doc_id <= 0) {
+            continue;
+        }
+        $label = isset($doc['label']) ? sanitize_text_field(wp_unslash($doc['label'])) : '';
+        $docs[] = array(
+            'id'    => $doc_id,
+            'label' => $label,
+        );
+    }
+
+    if (!empty($docs)) {
+        update_post_meta($post_id, 'sitio_cero_concurso_documentos', $docs);
+    } else {
+        delete_post_meta($post_id, 'sitio_cero_concurso_documentos');
+    }
+}
+add_action('save_post_concurso_publico', 'sitio_cero_save_concurso_publico_meta');
+
+function sitio_cero_enqueue_concursos_publicos_assets()
+{
+    if (!is_page_template('page-concursos-publicos.php') && !is_post_type_archive('concurso_publico')) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'sitio-cero-concursos-publicos',
+        get_template_directory_uri() . '/assets/js/concursos-publicos.js',
+        array(),
+        wp_get_theme()->get('Version'),
+        true
+    );
+}
+add_action('wp_enqueue_scripts', 'sitio_cero_enqueue_concursos_publicos_assets');
+
+function sitio_cero_render_concursos_publicos_accordion($posts)
+{
+    if (empty($posts)) {
+        echo '<p class="pc-flow">' . esc_html__('No hay concursos disponibles por ahora.', 'sitio-cero') . '</p>';
+        return;
+    }
+
+    echo '<div class="pc-accordion concurso-accordion" data-concurso-accordion>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+    foreach ($posts as $post) {
+        setup_postdata($post);
+        $post_id = $post->ID;
+        $docs = get_post_meta($post_id, 'sitio_cero_concurso_documentos', true);
+        if (!is_array($docs)) {
+            $docs = array();
+        }
+        $content = get_the_content(null, false, $post_id);
+        $content = wp_kses_post(wpautop($content));
+        ?>
+        <details class="concurso-item">
+            <summary><?php echo esc_html(get_the_title($post_id)); ?></summary>
+            <div class="pc-accordion__body">
+                <?php if ('' !== trim(wp_strip_all_tags($content))) : ?>
+                    <div class="concurso-desc">
+                        <?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    </div>
+                <?php endif; ?>
+                <div class="concurso-columns">
+                    <div class="concurso-docs" aria-label="<?php echo esc_attr__('Documentos del concurso', 'sitio-cero'); ?>">
+                        <?php
+                        if (empty($docs)) {
+                            echo '<p>' . esc_html__('No hay documentos asociados.', 'sitio-cero') . '</p>';
+                        } else {
+                            foreach ($docs as $doc) {
+                                $doc_id = isset($doc['id']) ? absint($doc['id']) : 0;
+                                if ($doc_id <= 0) {
+                                    continue;
+                                }
+                                $url = wp_get_attachment_url($doc_id);
+                                if (!$url) {
+                                    continue;
+                                }
+                                $label = isset($doc['label']) ? trim((string) $doc['label']) : '';
+                                if ('' === $label) {
+                                    $label = get_the_title($doc_id);
+                                }
+                                if ('' === $label) {
+                                    $label = __('Documento', 'sitio-cero');
+                                }
+                                ?>
+                                <a class="pc-link" href="<?php echo esc_url($url); ?>" target="_blank" rel="noopener">
+                                    <?php echo esc_html($label); ?>
+                                </a>
+                                <?php
+                            }
+                        }
+                        ?>
+                    </div>
+                    <div class="concurso-media">
+                        <?php if (has_post_thumbnail($post_id)) : ?>
+                            <?php
+                            echo get_the_post_thumbnail(
+                                $post_id,
+                                'large',
+                                array(
+                                    'class'   => 'concurso-image',
+                                    'loading' => 'lazy',
+                                )
+                            );
+                            ?>
+                        <?php else : ?>
+                            <div class="concurso-image--empty">
+                                <?php esc_html_e('Sin imagen referencial.', 'sitio-cero'); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </details>
+        <?php
+    }
+
+    wp_reset_postdata();
+
+    echo '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+}
+
 function sitio_cero_register_lamina_post_type()
 {
     $labels = array(
-        'name'               => __('Laminas Hero', 'sitio-cero'),
+        'name'               => __('Slide Banner', 'sitio-cero'),
         'singular_name'      => __('Lamina Hero', 'sitio-cero'),
-        'menu_name'          => __('Laminas Hero', 'sitio-cero'),
+        'menu_name'          => __('Slide Banner', 'sitio-cero'),
         'name_admin_bar'     => __('Lamina Hero', 'sitio-cero'),
         'add_new'            => __('Agregar nueva', 'sitio-cero'),
         'add_new_item'       => __('Agregar nueva lamina', 'sitio-cero'),
@@ -9291,7 +9165,7 @@ function sitio_cero_seed_default_lamina()
             'post_status'  => 'publish',
             'post_title'   => __('Lamina de ejemplo: Programa de limpieza comunal', 'sitio-cero'),
             'post_excerpt' => __('Revisa operativos de retiro de residuos, puntos limpios y calendario de intervencion por sectores de la comuna.', 'sitio-cero'),
-            'post_content' => __('Esta es una lamina de ejemplo para que veas como funciona el slider del hero. Puedes editar este contenido o crear nuevas laminas desde el menu Laminas Hero.', 'sitio-cero'),
+            'post_content' => __('Esta es una lamina de ejemplo para que veas como funciona el slider del hero. Puedes editar este contenido o crear nuevas laminas desde el menu Slide Banner.', 'sitio-cero'),
             'menu_order'   => 1,
         ),
         true

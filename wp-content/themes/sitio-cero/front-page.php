@@ -111,7 +111,7 @@ get_header();
                                 <article class="hero-slide is-active active" data-slide aria-hidden="false">
                                     <div class="hero-slide__media">
                                         <span class="hero-slide__image hero-slide__image--placeholder">
-                                            <?php esc_html_e('Crea laminas en Laminas Hero para mostrar el carrusel.', 'sitio-cero'); ?>
+                                            <?php esc_html_e('Crea laminas en Slide Banner para mostrar el carrusel.', 'sitio-cero'); ?>
                                         </span>
                                     </div>
                                 </article>
