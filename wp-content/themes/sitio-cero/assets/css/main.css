@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600;700&family=Poppins:wght@300&family=Source+Sans+3:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600;700&family=Poppins:wght@100;300;700&family=Source+Sans+3:wght@400;600;700&display=swap');
 
 :root {
     --color-navy: #0f2343;
@@ -31,7 +31,7 @@ body {
     color: var(--color-ink);
     font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     line-height: 1.6;
-    background: linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
+    background: #f7f9fc;
 }
 
 h1,
@@ -121,7 +121,9 @@ img {
 }
 
 .site-topbar {
-    background: var(--color-navy);
+    background-color: #1b468f;
+    background-image: none;
+    filter: none;
     color: #d8e6ff;
 }
 
@@ -207,7 +209,9 @@ img {
 }
 
 .site-brandbar {
-    background: #0f2343;
+    background-color: #1b468f;
+    background-image: none;
+    filter: none;
     border-bottom: 0;
 }
 
@@ -765,11 +769,9 @@ img {
 }
 
 .hero {
-    background-color: #0f2343;
-    background-image: radial-gradient(1400px 700px at 15% -20%, rgba(105, 170, 255, 0.45), transparent 60%),
-        radial-gradient(1100px 600px at 95% 15%, rgba(58, 120, 240, 0.4), transparent 65%),
-        radial-gradient(700px 420px at 50% 120%, rgba(7, 18, 38, 0.8), transparent 60%),
-        linear-gradient(135deg, #173261 0%, #0f2343 50%, #0a1931 100%);
+    background-color: #1b468f;
+    background-image: none;
+    filter: none;
     color: #ffffff;
     padding: clamp(1.4rem, 3vw, 2.4rem) 0 clamp(2.4rem, 4.8vw, 3.6rem);
     position: relative;
@@ -793,9 +795,10 @@ img {
     position: absolute;
     inset: auto -25% -50% -15%;
     height: 70%;
-    background: radial-gradient(65% 65% at 50% 50%, rgba(7, 17, 35, 0.65), rgba(7, 17, 35, 0));
-    opacity: 0.8;
+    background: none;
+    opacity: 0;
     pointer-events: none;
+    display: none;
 }
 
 .hero::after {
@@ -804,8 +807,9 @@ img {
     inset: -45% -10% auto auto;
     height: 70%;
     width: 65%;
-    background: radial-gradient(70% 70% at 30% 30%, rgba(160, 205, 255, 0.25), rgba(160, 205, 255, 0));
+    background: none;
     pointer-events: none;
+    display: none;
 }
 
 .hero-row {
@@ -824,7 +828,7 @@ img {
 .hero-row .servicios {
     padding: 1.2rem 1.05rem 1.3rem;
     border-radius: 20px;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+    background: none;
     border: 1px solid rgba(150, 190, 255, 0.24);
     box-shadow: 0 14px 34px rgba(3, 12, 28, 0.28);
     backdrop-filter: blur(6px);
@@ -832,7 +836,7 @@ img {
 
 .hero-row .servicios.llamados {
     padding: 0.95rem 0.85rem 1.1rem;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+    background: none;
     border: 1px solid rgba(150, 190, 255, 0.28);
     box-shadow: 0 18px 40px rgba(3, 12, 28, 0.34);
 }
@@ -1157,7 +1161,9 @@ img {
 }
 
 .section--accent {
-    background: linear-gradient(120deg, var(--color-navy-soft) 0%, var(--color-blue) 100%);
+    background-color: #1b468f;
+    background-image: none;
+    filter: none;
     color: #ffffff;
 }
 
@@ -1370,6 +1376,401 @@ img {
 .section-link:hover,
 .section-link:focus-visible {
     text-decoration: underline;
+}
+
+.section--tramites {
+    padding-top: clamp(2rem, 4vw, 3.2rem);
+    padding-bottom: clamp(2rem, 4vw, 3.2rem);
+}
+
+.tramites-showcase {
+    width: min(94vw, 1260px);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    border-radius: 26px;
+    overflow: hidden;
+    background: #0f2343;
+    border: 1px solid rgba(15, 35, 67, 0.2);
+    box-shadow: 0 32px 80px rgba(15, 35, 67, 0.18), 0 10px 28px rgba(15, 35, 67, 0.16);
+}
+
+.tramites-hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(2rem, 4vw, 3rem);
+    background: linear-gradient(150deg, #0f2343 0%, #162b4b 45%, #0a1428 100%);
+    color: #ffffff;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1.6rem;
+}
+
+.tramites-hero::before,
+.tramites-hero::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.tramites-hero::before {
+    width: 360px;
+    height: 360px;
+    top: -120px;
+    right: -90px;
+    background: radial-gradient(circle, rgba(246, 192, 70, 0.2) 0%, transparent 70%);
+}
+
+.tramites-hero::after {
+    width: 240px;
+    height: 240px;
+    bottom: -70px;
+    left: -60px;
+    background: radial-gradient(circle, rgba(23, 89, 158, 0.28) 0%, transparent 70%);
+}
+
+.tramites-hero__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.68);
+    margin-bottom: 0.75rem;
+}
+
+.tramites-hero__title {
+    font-size: clamp(2.1rem, 3.8vw, 3.2rem);
+    font-weight: 100;
+    line-height: 1.05;
+    margin: 0;
+}
+
+.tramites-hero__title-main {
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+}
+
+.tramites-hero__title-highlight {
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    font-weight: 700;
+}
+
+.tramites-hero__subtitle {
+    display: block;
+    font-size: 0.4em;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    opacity: 0.78;
+    margin-top: 0.25em;
+}
+
+.tramites-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    position: relative;
+    z-index: 1;
+}
+
+.tramites-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 1.02rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    white-space: nowrap;
+}
+
+.tramites-pill svg,
+.tramites-pill__icon {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.tramites-pill__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    line-height: 1;
+}
+
+.tramites-pill__icon--image img {
+    width: 17px;
+    height: 17px;
+    display: block;
+}
+
+.tramites-pill:hover,
+.tramites-pill:focus-visible {
+    border-color: rgba(246, 192, 70, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(246, 192, 70, 0.2);
+}
+
+.tramites-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+}
+
+.tramites-card {
+    --tramites-card-bg: #0f2343;
+    --tramites-card-text: #ffffff;
+    --tramites-card-sub: rgba(255, 255, 255, 0.68);
+    --tramites-card-icon-bg: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.55rem 1.4rem;
+    background: var(--tramites-card-bg);
+    color: var(--tramites-card-text);
+    text-decoration: none;
+    position: relative;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tramites-card:nth-child(2n) {
+    border-left: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.tramites-card:nth-child(n + 3) {
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.tramites-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0);
+    transition: background 0.25s ease;
+}
+
+.tramites-card:hover::before,
+.tramites-card:focus-visible::before {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.tramites-card:hover,
+.tramites-card:focus-visible {
+    transform: scale(1.015);
+    z-index: 2;
+    box-shadow: 0 12px 26px rgba(15, 35, 67, 0.18);
+}
+
+.tramites-card__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--tramites-card-icon-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.tramites-card:hover .tramites-card__icon,
+.tramites-card:focus-visible .tramites-card__icon {
+    transform: scale(1.06) rotate(-4deg);
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.tramites-card__icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.tramites-card__icon--google {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.tramites-card__icon--image img {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+.tramites-card__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tramites-card__title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.3;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.tramites-card__sub {
+    font-size: 0.74rem;
+    color: var(--tramites-card-sub);
+}
+
+.tramites-card__arrow {
+    margin-left: auto;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.tramites-card:hover .tramites-card__arrow,
+.tramites-card:focus-visible .tramites-card__arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.tramites-card--gold {
+    --tramites-card-bg: var(--color-gold);
+    --tramites-card-text: #1c1f26;
+    --tramites-card-sub: rgba(0, 0, 0, 0.55);
+    --tramites-card-icon-bg: rgba(0, 0, 0, 0.12);
+}
+
+.tramites-card--navy {
+    --tramites-card-bg: #0f2343;
+}
+
+.tramites-card--rust {
+    --tramites-card-bg: #cf2f3f;
+}
+
+.tramites-card--blue {
+    --tramites-card-bg: #17599e;
+}
+
+.tramites-card--orange {
+    --tramites-card-bg: #e1702f;
+}
+
+.tramites-card--ink {
+    --tramites-card-bg: #192a3d;
+}
+
+.tramites-card--slate {
+    --tramites-card-bg: #2d3c4f;
+}
+
+.tramites-card--green {
+    --tramites-card-bg: #9ed88f;
+    --tramites-card-text: #1b2a1f;
+    --tramites-card-sub: rgba(0, 0, 0, 0.55);
+    --tramites-card-icon-bg: rgba(0, 0, 0, 0.12);
+}
+
+@keyframes tramitesFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tramites-hero__label {
+    animation: tramitesFadeUp 0.5s ease both;
+}
+
+.tramites-hero__title {
+    animation: tramitesFadeUp 0.6s 0.08s ease both;
+}
+
+.tramites-pills {
+    animation: tramitesFadeUp 0.7s 0.18s ease both;
+}
+
+.tramites-card {
+    animation: tramitesFadeUp 0.5s ease both;
+}
+
+.tramites-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.tramites-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.tramites-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.tramites-card:nth-child(4) {
+    animation-delay: 0.2s;
+}
+
+.tramites-card:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+.tramites-card:nth-child(6) {
+    animation-delay: 0.3s;
+}
+
+.tramites-card:nth-child(7) {
+    animation-delay: 0.35s;
+}
+
+.tramites-card:nth-child(8) {
+    animation-delay: 0.4s;
+}
+
+@media (max-width: 980px) {
+    .tramites-showcase {
+        grid-template-columns: 1fr;
+    }
+
+    .tramites-hero {
+        min-height: auto;
+    }
+
+    .tramites-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .tramites-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tramites-card:nth-child(2n) {
+        border-left: none;
+    }
+
+    .tramites-card:nth-child(n + 2) {
+        border-top: 1px solid rgba(0, 0, 0, 0.15);
+    }
+
+    .tramites-card:nth-child(-n + 1) {
+        border-top: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tramites-hero__label,
+    .tramites-hero__title,
+    .tramites-pills,
+    .tramites-card {
+        animation: none;
+        transition: none;
+    }
 }
 
 .service-grid {

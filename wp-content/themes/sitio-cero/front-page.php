@@ -66,9 +66,6 @@ get_header();
                                     if ('' === $hero_cta_url) {
                                         $hero_cta_url = trim((string) get_post_meta(get_the_ID(), 'hero_cta_url', true));
                                     }
-                                    if ('#tramites' === $hero_cta_url) {
-                                        $hero_cta_url = '#avisos';
-                                    }
                                     if ('' === $hero_cta_url) {
                                         $hero_cta_url = '#';
                                     }
@@ -233,6 +230,51 @@ get_header();
                 <?php get_template_part('template-parts/content', 'none'); ?>
             <?php endif; ?>
             </div>
+        </div>
+    </section>
+
+    <section id="tramites" class="section section--tramites">
+        <div class="tramites-showcase" aria-label="<?php esc_attr_e('Trámites municipales', 'sitio-cero'); ?>">
+            <div class="tramites-hero">
+                <div class="tramites-hero__content">
+                    <p class="tramites-hero__label"><?php esc_html_e('Municipalidad de Concepción', 'sitio-cero'); ?></p>
+                    <h2 class="tramites-hero__title">
+                        <span class="tramites-hero__title-main"><?php esc_html_e('Trámites', 'sitio-cero'); ?></span><br>
+                        <span class="tramites-hero__title-highlight"><?php esc_html_e('en línea', 'sitio-cero'); ?></span>
+                        <span class="tramites-hero__subtitle"><?php esc_html_e('Servicios y comunidad', 'sitio-cero'); ?></span>
+                    </h2>
+                </div>
+
+                <nav class="tramites-pills" aria-label="<?php esc_attr_e('Servicios destacados', 'sitio-cero'); ?>">
+                    <?php
+                    wp_nav_menu(
+                        array(
+                            'theme_location' => 'tramites_hero',
+                            'container'      => false,
+                            'depth'          => 1,
+                            'items_wrap'     => '%3$s',
+                            'fallback_cb'    => 'sitio_cero_tramites_hero_menu_fallback',
+                            'walker'         => new Sitio_Cero_Tramites_Hero_Menu_Walker(),
+                        )
+                    );
+                    ?>
+                </nav>
+            </div>
+
+            <nav class="tramites-grid" aria-label="<?php esc_attr_e('Accesos rápidos', 'sitio-cero'); ?>">
+                <?php
+                wp_nav_menu(
+                    array(
+                        'theme_location' => 'tramites_grid',
+                        'container'      => false,
+                        'depth'          => 1,
+                        'items_wrap'     => '%3$s',
+                        'fallback_cb'    => 'sitio_cero_tramites_grid_menu_fallback',
+                        'walker'         => new Sitio_Cero_Tramites_Grid_Menu_Walker(),
+                    )
+                );
+                ?>
+            </nav>
         </div>
     </section>
 
@@ -563,7 +605,7 @@ get_header();
                     <li><strong>Presencial:</strong> Lunes a viernes, 08:30 a 14:00 hrs.</li>
                     <li><strong>Telefonico:</strong> +56 2 3386 8000.</li>
                     <li><strong>Correo:</strong> contacto@municipio.cl.</li>
-                    <li><strong>Oficina virtual:</strong> Tramites, solicitudes y seguimiento.</li>
+                    <li><strong>Oficina virtual:</strong> Trámites, solicitudes y seguimiento.</li>
                 </ul>
                 <a class="button button--light" href="#">Ingresar a oficina virtual</a>
             </article>

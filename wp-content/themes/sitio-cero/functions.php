@@ -86,6 +86,8 @@ function sitio_cero_setup()
             'primary'          => __('Menu principal', 'sitio-cero'),
             'hero_info'        => __('Menu Quiero informacion', 'sitio-cero'),
             'temas_ciudadanos' => __('Menu Temas ciudadanos', 'sitio-cero'),
+            'tramites_hero'    => __('Menu Trámites - Hero', 'sitio-cero'),
+            'tramites_grid'    => __('Menu Trámites - Grilla', 'sitio-cero'),
         )
     );
 }
@@ -8569,6 +8571,473 @@ if (!class_exists('Sitio_Cero_Hero_Info_Menu_Walker')) {
             $item_output .= isset($args->after) ? $args->after : '';
 
             $output .= apply_filters('walker_nav_menu_start_el', $item_output, $menu_item, $depth, $args);
+        }
+    }
+}
+
+function sitio_cero_get_tramites_icon_svg_map()
+{
+    return array(
+        'leaf' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12M12 12C12 6 7 4 2 4c0 5 2 10 10 8M12 12c0-6 5-8 10-8-1 5-4 10-10 8"/></svg>',
+        'camera' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14"/><rect x="1" y="6" width="15" height="13" rx="2"/></svg>',
+        'id_card' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>',
+        'document' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+        'people' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>',
+        'pin' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+        'star' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        'truck' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8l5 1v9l-5 1V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+        'payment' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+        'layers' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+        'social' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11l-4 4-2-2"/></svg>',
+        'publications' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v2"/><path d="M2 12h10m0 0l-4-4m4 4l-4 4"/></svg>',
+        'jobs' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6M8 11h6"/></svg>',
+    );
+}
+
+function sitio_cero_get_tramites_icon_svg($icon_key)
+{
+    $icon_key = strtolower(trim((string) $icon_key));
+    $icons = sitio_cero_get_tramites_icon_svg_map();
+    if (!isset($icons[$icon_key])) {
+        return '';
+    }
+    return $icons[$icon_key];
+}
+
+function sitio_cero_get_tramites_hero_default_items()
+{
+    return array(
+        array(
+            'label' => __('Permiso de circulación', 'sitio-cero'),
+            'url'   => get_search_link(__('Permiso de circulación', 'sitio-cero')),
+            'icon'  => 'leaf',
+            'menu_icon' => 'directions_car',
+        ),
+        array(
+            'label' => __('Patentes comerciales', 'sitio-cero'),
+            'url'   => get_search_link(__('Patentes comerciales', 'sitio-cero')),
+            'icon'  => 'camera',
+            'menu_icon' => 'storefront',
+        ),
+        array(
+            'label' => __('Licencias de conducir', 'sitio-cero'),
+            'url'   => get_search_link(__('Licencias de conducir', 'sitio-cero')),
+            'icon'  => 'id_card',
+            'menu_icon' => 'badge',
+        ),
+        array(
+            'label' => __('Permisos de obras', 'sitio-cero'),
+            'url'   => get_search_link(__('Permisos de obras', 'sitio-cero')),
+            'icon'  => 'document',
+            'menu_icon' => 'construction',
+        ),
+        array(
+            'label' => __('Aseo y residuos', 'sitio-cero'),
+            'url'   => get_search_link(__('Aseo y residuos', 'sitio-cero')),
+            'icon'  => 'truck',
+            'menu_icon' => 'cleaning_services',
+        ),
+        array(
+            'label' => __('Subsidios y beneficios', 'sitio-cero'),
+            'url'   => get_search_link(__('Subsidios y beneficios', 'sitio-cero')),
+            'icon'  => 'people',
+            'menu_icon' => 'volunteer_activism',
+        ),
+        array(
+            'label' => __('Transparencia', 'sitio-cero'),
+            'url'   => get_search_link(__('Transparencia', 'sitio-cero')),
+            'icon'  => 'star',
+            'menu_icon' => 'policy',
+        ),
+        array(
+            'label' => __('Atención ciudadana', 'sitio-cero'),
+            'url'   => get_search_link(__('Atención ciudadana', 'sitio-cero')),
+            'icon'  => 'pin',
+            'menu_icon' => 'support_agent',
+        ),
+    );
+}
+
+function sitio_cero_get_tramites_grid_default_items()
+{
+    return array(
+        array(
+            'label'    => __('Pagos en línea', 'sitio-cero'),
+            'subtitle' => __('Patentes, multas y más', 'sitio-cero'),
+            'url'      => get_search_link(__('Pagos en línea', 'sitio-cero')),
+            'icon'     => 'payment',
+            'menu_icon' => 'payments',
+            'classes'  => array('tramites-card--gold'),
+        ),
+        array(
+            'label'    => __('Ordenanzas municipales', 'sitio-cero'),
+            'subtitle' => __('Normativa vigente', 'sitio-cero'),
+            'url'      => get_search_link(__('Ordenanzas municipales', 'sitio-cero')),
+            'icon'     => 'layers',
+            'menu_icon' => 'gavel',
+            'classes'  => array('tramites-card--navy'),
+        ),
+        array(
+            'label'    => __('Planes y políticas comunales', 'sitio-cero'),
+            'subtitle' => __('Documentos estratégicos', 'sitio-cero'),
+            'url'      => get_search_link(__('Planes y políticas comunales', 'sitio-cero')),
+            'icon'     => 'document',
+            'menu_icon' => 'description',
+            'classes'  => array('tramites-card--rust'),
+        ),
+        array(
+            'label'    => __('Licencias de conducir', 'sitio-cero'),
+            'subtitle' => __('Trámites y renovaciones', 'sitio-cero'),
+            'url'      => get_search_link(__('Licencias de conducir', 'sitio-cero')),
+            'icon'     => 'id_card',
+            'menu_icon' => 'badge',
+            'classes'  => array('tramites-card--blue'),
+        ),
+        array(
+            'label'    => __('Programas sociales', 'sitio-cero'),
+            'subtitle' => __('Beneficios y postulaciones', 'sitio-cero'),
+            'url'      => get_search_link(__('Programas sociales', 'sitio-cero')),
+            'icon'     => 'social',
+            'menu_icon' => 'volunteer_activism',
+            'classes'  => array('tramites-card--orange'),
+        ),
+        array(
+            'label'    => __('Publicaciones municipales', 'sitio-cero'),
+            'subtitle' => __('Memorias, boletines e informes', 'sitio-cero'),
+            'url'      => get_search_link(__('Publicaciones municipales', 'sitio-cero')),
+            'icon'     => 'publications',
+            'menu_icon' => 'library_books',
+            'classes'  => array('tramites-card--ink'),
+        ),
+        array(
+            'label'    => __('Retiro residuos domiciliarios', 'sitio-cero'),
+            'subtitle' => __('Calendario y zonas', 'sitio-cero'),
+            'url'      => get_search_link(__('Retiro residuos domiciliarios', 'sitio-cero')),
+            'icon'     => 'truck',
+            'menu_icon' => 'delete_sweep',
+            'classes'  => array('tramites-card--slate'),
+        ),
+        array(
+            'label'    => __('Ofertas laborales', 'sitio-cero'),
+            'subtitle' => __('Empleos y convocatorias', 'sitio-cero'),
+            'url'      => get_search_link(__('Ofertas laborales', 'sitio-cero')),
+            'icon'     => 'jobs',
+            'menu_icon' => 'business',
+            'classes'  => array('tramites-card--green'),
+        ),
+    );
+}
+
+function sitio_cero_seed_tramites_hero_menu_once()
+{
+    $seed_option = 'sitio_cero_tramites_hero_menu_seeded';
+    if ('1' === (string) get_option($seed_option, '0')) {
+        return;
+    }
+
+    if (!function_exists('has_nav_menu') || !function_exists('wp_create_nav_menu')) {
+        return;
+    }
+
+    if (has_nav_menu('tramites_hero')) {
+        update_option($seed_option, '1');
+        return;
+    }
+
+    $menu_name = __('Menu Trámites - Hero', 'sitio-cero');
+    $menu_object = wp_get_nav_menu_object($menu_name);
+    $menu_id = $menu_object && isset($menu_object->term_id) ? (int) $menu_object->term_id : 0;
+
+    if ($menu_id <= 0) {
+        $created_menu_id = wp_create_nav_menu($menu_name);
+        if (is_wp_error($created_menu_id) || (int) $created_menu_id <= 0) {
+            return;
+        }
+        $menu_id = (int) $created_menu_id;
+    }
+
+    $existing_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'any'));
+    if (empty($existing_items)) {
+        $default_items = sitio_cero_get_tramites_hero_default_items();
+        foreach ($default_items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $item_label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+            $item_url = isset($item['url']) ? esc_url_raw((string) $item['url']) : '';
+            if ('' === $item_label || '' === $item_url) {
+                continue;
+            }
+
+            $menu_item_id = wp_update_nav_menu_item(
+                $menu_id,
+                0,
+                array(
+                    'menu-item-title'  => $item_label,
+                    'menu-item-type'   => 'custom',
+                    'menu-item-url'    => $item_url,
+                    'menu-item-status' => 'publish',
+                )
+            );
+
+            if (!is_wp_error($menu_item_id) && (int) $menu_item_id > 0) {
+                $menu_icon = isset($item['menu_icon']) ? sitio_cero_sanitize_google_menu_icon_name((string) $item['menu_icon']) : '';
+                if ('' !== $menu_icon) {
+                    update_post_meta((int) $menu_item_id, '_sitio_cero_menu_icon', 'google:' . $menu_icon);
+                }
+            }
+        }
+    }
+
+    $locations = get_theme_mod('nav_menu_locations');
+    if (!is_array($locations)) {
+        $locations = array();
+    }
+    $locations['tramites_hero'] = $menu_id;
+    set_theme_mod('nav_menu_locations', $locations);
+
+    update_option($seed_option, '1');
+}
+add_action('init', 'sitio_cero_seed_tramites_hero_menu_once', 23);
+
+function sitio_cero_seed_tramites_grid_menu_once()
+{
+    $seed_option = 'sitio_cero_tramites_grid_menu_seeded';
+    if ('1' === (string) get_option($seed_option, '0')) {
+        return;
+    }
+
+    if (!function_exists('has_nav_menu') || !function_exists('wp_create_nav_menu')) {
+        return;
+    }
+
+    if (has_nav_menu('tramites_grid')) {
+        update_option($seed_option, '1');
+        return;
+    }
+
+    $menu_name = __('Menu Trámites - Grilla', 'sitio-cero');
+    $menu_object = wp_get_nav_menu_object($menu_name);
+    $menu_id = $menu_object && isset($menu_object->term_id) ? (int) $menu_object->term_id : 0;
+
+    if ($menu_id <= 0) {
+        $created_menu_id = wp_create_nav_menu($menu_name);
+        if (is_wp_error($created_menu_id) || (int) $created_menu_id <= 0) {
+            return;
+        }
+        $menu_id = (int) $created_menu_id;
+    }
+
+    $existing_items = wp_get_nav_menu_items($menu_id, array('post_status' => 'any'));
+    if (empty($existing_items)) {
+        $default_items = sitio_cero_get_tramites_grid_default_items();
+        foreach ($default_items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $item_label = isset($item['label']) ? sanitize_text_field((string) $item['label']) : '';
+            $item_url = isset($item['url']) ? esc_url_raw((string) $item['url']) : '';
+            $item_desc = isset($item['subtitle']) ? sanitize_text_field((string) $item['subtitle']) : '';
+            $item_classes = '';
+            if (isset($item['classes']) && is_array($item['classes'])) {
+                $item_classes = implode(' ', array_filter(array_map('sanitize_html_class', $item['classes'])));
+            }
+
+            if ('' === $item_label || '' === $item_url) {
+                continue;
+            }
+
+            $menu_item_args = array(
+                'menu-item-title'  => $item_label,
+                'menu-item-type'   => 'custom',
+                'menu-item-url'    => $item_url,
+                'menu-item-status' => 'publish',
+            );
+            if ('' !== $item_desc) {
+                $menu_item_args['menu-item-description'] = $item_desc;
+            }
+            if ('' !== $item_classes) {
+                $menu_item_args['menu-item-classes'] = $item_classes;
+            }
+
+            $menu_item_id = wp_update_nav_menu_item($menu_id, 0, $menu_item_args);
+            if (!is_wp_error($menu_item_id) && (int) $menu_item_id > 0) {
+                $menu_icon = isset($item['menu_icon']) ? sitio_cero_sanitize_google_menu_icon_name((string) $item['menu_icon']) : '';
+                if ('' !== $menu_icon) {
+                    update_post_meta((int) $menu_item_id, '_sitio_cero_menu_icon', 'google:' . $menu_icon);
+                }
+            }
+        }
+    }
+
+    $locations = get_theme_mod('nav_menu_locations');
+    if (!is_array($locations)) {
+        $locations = array();
+    }
+    $locations['tramites_grid'] = $menu_id;
+    set_theme_mod('nav_menu_locations', $locations);
+
+    update_option($seed_option, '1');
+}
+add_action('init', 'sitio_cero_seed_tramites_grid_menu_once', 24);
+
+function sitio_cero_tramites_hero_menu_fallback()
+{
+    $items = sitio_cero_get_tramites_hero_default_items();
+    foreach ($items as $item) {
+        $label = isset($item['label']) ? (string) $item['label'] : '';
+        $url = isset($item['url']) ? (string) $item['url'] : '#';
+        $icon = isset($item['icon']) ? sitio_cero_get_tramites_icon_svg($item['icon']) : '';
+
+        echo '<a class="tramites-pill" href="' . esc_url($url) . '">';
+        if ('' !== $icon) {
+            echo $icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+        echo esc_html($label);
+        echo '</a>';
+    }
+}
+
+function sitio_cero_tramites_grid_menu_fallback()
+{
+    $items = sitio_cero_get_tramites_grid_default_items();
+    foreach ($items as $item) {
+        $label = isset($item['label']) ? (string) $item['label'] : '';
+        $subtitle = isset($item['subtitle']) ? (string) $item['subtitle'] : '';
+        $url = isset($item['url']) ? (string) $item['url'] : '#';
+        $icon = isset($item['icon']) ? sitio_cero_get_tramites_icon_svg($item['icon']) : '';
+        $classes = isset($item['classes']) && is_array($item['classes']) ? $item['classes'] : array();
+        $classes[] = 'tramites-card';
+        $class_names = implode(' ', array_filter(array_map('sanitize_html_class', $classes)));
+
+        echo '<a class="' . esc_attr($class_names) . '" href="' . esc_url($url) . '">';
+        echo '<span class="tramites-card__icon" aria-hidden="true">';
+        if ('' !== $icon) {
+            echo $icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+        echo '</span>';
+        echo '<span class="tramites-card__body">';
+        echo '<span class="tramites-card__title">' . esc_html($label) . '</span>';
+        if ('' !== trim($subtitle)) {
+            echo '<span class="tramites-card__sub">' . esc_html($subtitle) . '</span>';
+        }
+        echo '</span>';
+        echo '<span class="tramites-card__arrow" aria-hidden="true">&#x2192;</span>';
+        echo '</a>';
+    }
+}
+
+if (!class_exists('Sitio_Cero_Tramites_Hero_Menu_Walker')) {
+    class Sitio_Cero_Tramites_Hero_Menu_Walker extends Walker_Nav_Menu
+    {
+        public function start_el(&$output, $data_object, $depth = 0, $args = null, $id = 0)
+        {
+            if (!$data_object instanceof WP_Post) {
+                return;
+            }
+
+            $menu_item = $data_object;
+
+            $classes = empty($menu_item->classes) ? array() : (array) $menu_item->classes;
+            $classes[] = 'tramites-pill';
+            $class_names = implode(' ', array_filter(array_map('sanitize_html_class', $classes)));
+
+            $atts = array();
+            $atts['title']  = !empty($menu_item->attr_title) ? $menu_item->attr_title : '';
+            $atts['target'] = !empty($menu_item->target) ? $menu_item->target : '';
+            $atts['rel']    = !empty($menu_item->xfn) ? $menu_item->xfn : '';
+            $atts['href']   = !empty($menu_item->url) ? $menu_item->url : '';
+
+            $attributes = '';
+            foreach ($atts as $attr => $value) {
+                if ('' === $value) {
+                    continue;
+                }
+
+                $escaped_value = ('href' === $attr) ? esc_url($value) : esc_attr($value);
+                $attributes .= ' ' . $attr . '="' . $escaped_value . '"';
+            }
+
+            $title = apply_filters('the_title', $menu_item->title, $menu_item->ID);
+            $title = apply_filters('nav_menu_item_title', $title, $menu_item, $args, $depth);
+
+            $item_output = '<a class="' . esc_attr($class_names) . '"' . $attributes . '>';
+            $icon_markup = sitio_cero_get_menu_item_icon_markup($menu_item->ID, 'tramites-pill__icon');
+            if ('' !== $icon_markup) {
+                $item_output .= $icon_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            }
+            $item_output .= '<span class="tramites-pill__text">' . $title . '</span>';
+            $item_output .= '</a>';
+
+            $output .= apply_filters('walker_nav_menu_start_el', $item_output, $menu_item, $depth, $args);
+        }
+
+        public function end_el(&$output, $data_object, $depth = 0, $args = null)
+        {
+            return;
+        }
+    }
+}
+
+if (!class_exists('Sitio_Cero_Tramites_Grid_Menu_Walker')) {
+    class Sitio_Cero_Tramites_Grid_Menu_Walker extends Walker_Nav_Menu
+    {
+        public function start_el(&$output, $data_object, $depth = 0, $args = null, $id = 0)
+        {
+            if (!$data_object instanceof WP_Post) {
+                return;
+            }
+
+            $menu_item = $data_object;
+
+            $classes = empty($menu_item->classes) ? array() : (array) $menu_item->classes;
+            $classes[] = 'tramites-card';
+            $class_names = implode(' ', array_filter(array_map('sanitize_html_class', $classes)));
+
+            $atts = array();
+            $atts['title']  = !empty($menu_item->attr_title) ? $menu_item->attr_title : '';
+            $atts['target'] = !empty($menu_item->target) ? $menu_item->target : '';
+            $atts['rel']    = !empty($menu_item->xfn) ? $menu_item->xfn : '';
+            $atts['href']   = !empty($menu_item->url) ? $menu_item->url : '';
+
+            $attributes = '';
+            foreach ($atts as $attr => $value) {
+                if ('' === $value) {
+                    continue;
+                }
+
+                $escaped_value = ('href' === $attr) ? esc_url($value) : esc_attr($value);
+                $attributes .= ' ' . $attr . '="' . $escaped_value . '"';
+            }
+
+            $title = apply_filters('the_title', $menu_item->title, $menu_item->ID);
+            $title = apply_filters('nav_menu_item_title', $title, $menu_item, $args, $depth);
+            $description = isset($menu_item->description) ? trim((string) $menu_item->description) : '';
+
+            $icon_markup = sitio_cero_get_menu_item_icon_markup($menu_item->ID, 'tramites-card__icon');
+            if ('' === $icon_markup) {
+                $icon_markup = '<span class="tramites-card__icon tramites-card__icon--placeholder" aria-hidden="true"></span>';
+            }
+
+            $item_output = '<a class="' . esc_attr($class_names) . '"' . $attributes . '>';
+            $item_output .= $icon_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            $item_output .= '<span class="tramites-card__body">';
+            $item_output .= '<span class="tramites-card__title">' . $title . '</span>';
+            if ('' !== $description) {
+                $item_output .= '<span class="tramites-card__sub">' . esc_html($description) . '</span>';
+            }
+            $item_output .= '</span>';
+            $item_output .= '<span class="tramites-card__arrow" aria-hidden="true">&#x2192;</span>';
+            $item_output .= '</a>';
+
+            $output .= apply_filters('walker_nav_menu_start_el', $item_output, $menu_item, $depth, $args);
+        }
+
+        public function end_el(&$output, $data_object, $depth = 0, $args = null)
+        {
+            return;
         }
     }
 }
